@@ -1,5 +1,8 @@
 import AccessTimeRoundedIcon from "@mui/icons-material/AccessTimeRounded";
 import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import CloudDoneRoundedIcon from "@mui/icons-material/CloudDoneRounded";
+import CloudOffRoundedIcon from "@mui/icons-material/CloudOffRounded";
+import CloudSyncRoundedIcon from "@mui/icons-material/CloudSyncRounded";
 import EventSeatRoundedIcon from "@mui/icons-material/EventSeatRounded";
 import LocalParkingRoundedIcon from "@mui/icons-material/LocalParkingRounded";
 import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
@@ -21,13 +24,14 @@ import {
   Toolbar,
   Typography,
 } from "@mui/material";
+import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { fetchDashboardSummary, fetchSpotHistory, fetchSpots } from "./api/client";
+import { apiBaseUrl, fetchDashboardSummary, fetchSpotHistory, fetchSpots } from "./api/client";
 import { DistanceHistoryChart } from "./components/DistanceHistoryChart";
-import type { DashboardSummary, SpotHistory, SpotState } from "./types/api";
+import type { DashboardSnapshot, DashboardSummary, SpotHistory, SpotState } from "./types/api";
 
-const DASHBOARD_REFRESH_MS = 5000;
+type LiveConnectionState = "connecting" | "connected" | "disconnected";
 
 function formatUtc(utc: string | null): string {
   if (!utc) {
@@ -72,6 +76,18 @@ function SummaryCard({
   );
 }
 
+function LiveStateChip({ state }: { state: LiveConnectionState }) {
+  if (state === "connected") {
+    return <Chip color="success" icon={<CloudDoneRoundedIcon />} label="Live connected" />;
+  }
+
+  if (state === "connecting") {
+    return <Chip color="warning" icon={<CloudSyncRoundedIcon />} label="Live reconnecting" />;
+  }
+
+  return <Chip color="default" icon={<CloudOffRoundedIcon />} label="Live offline" />;
+}
+
 export default function App() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [spots, setSpots] = useState<SpotState[]>([]);
@@ -80,11 +96,28 @@ export default function App() {
   const [loadingDashboard, setLoadingDashboard] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [liveState, setLiveState] = useState<LiveConnectionState>("disconnected");
 
   const selectedSpot = useMemo(
     () => spots.find((spot) => spot.id === selectedSpotId) ?? null,
     [spots, selectedSpotId],
   );
+
+  const applySpotList = useCallback((nextSpots: SpotState[]) => {
+    setSpots(nextSpots);
+
+    setSelectedSpotId((previousSpotId) => {
+      if (nextSpots.length === 0) {
+        return null;
+      }
+
+      if (previousSpotId && nextSpots.some((spot) => spot.id === previousSpotId)) {
+        return previousSpotId;
+      }
+
+      return nextSpots[0].id;
+    });
+  }, []);
 
   const loadDashboard = useCallback(async () => {
     setLoadingDashboard(true);
@@ -92,22 +125,14 @@ export default function App() {
     try {
       const [nextSummary, nextSpots] = await Promise.all([fetchDashboardSummary(), fetchSpots()]);
       setSummary(nextSummary);
-      setSpots(nextSpots);
-
-      if (nextSpots.length === 0) {
-        setSelectedSpotId(null);
-        setHistory(null);
-      } else if (!nextSpots.some((spot) => spot.id === selectedSpotId)) {
-        setSelectedSpotId(nextSpots[0].id);
-      }
-
+      applySpotList(nextSpots);
       setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load dashboard data.");
     } finally {
       setLoadingDashboard(false);
     }
-  }, [selectedSpotId]);
+  }, [applySpotList]);
 
   const loadHistory = useCallback(async () => {
     if (!selectedSpotId) {
@@ -120,6 +145,7 @@ export default function App() {
     try {
       const historyResponse = await fetchSpotHistory(selectedSpotId, { maxPoints: 1000 });
       setHistory(historyResponse);
+      setError(null);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : "Failed to load history.");
     } finally {
@@ -129,15 +155,49 @@ export default function App() {
 
   useEffect(() => {
     void loadDashboard();
+  }, [loadDashboard]);
 
-    const intervalId = window.setInterval(() => {
-      void loadDashboard();
-    }, DASHBOARD_REFRESH_MS);
+  useEffect(() => {
+    const connection = new HubConnectionBuilder()
+      .withUrl(`${apiBaseUrl}/hubs/parking`)
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Warning)
+      .build();
+
+    connection.on("dashboardSnapshot", (snapshot: DashboardSnapshot) => {
+      setSummary(snapshot.summary);
+      applySpotList(snapshot.spots);
+      setLoadingDashboard(false);
+      setError(null);
+    });
+
+    connection.onreconnecting(() => {
+      setLiveState("connecting");
+    });
+
+    connection.onreconnected(() => {
+      setLiveState("connected");
+    });
+
+    connection.onclose(() => {
+      setLiveState("disconnected");
+    });
+
+    setLiveState("connecting");
+
+    void connection
+      .start()
+      .then(() => {
+        setLiveState("connected");
+      })
+      .catch(() => {
+        setLiveState("disconnected");
+      });
 
     return () => {
-      window.clearInterval(intervalId);
+      void connection.stop();
     };
-  }, [loadDashboard]);
+  }, [applySpotList]);
 
   useEffect(() => {
     void loadHistory();
@@ -153,17 +213,21 @@ export default function App() {
           <Typography variant="h6" fontWeight={700} sx={{ flexGrow: 1 }}>
             Parking Monitoring Dashboard
           </Typography>
-          <Button
-            variant="contained"
-            color="primary"
-            startIcon={<RefreshRoundedIcon />}
-            onClick={() => {
-              void loadDashboard();
-              void loadHistory();
-            }}
-          >
-            Refresh
-          </Button>
+
+          <Stack direction="row" spacing={1.5} alignItems="center">
+            <LiveStateChip state={liveState} />
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<RefreshRoundedIcon />}
+              onClick={() => {
+                void loadDashboard();
+                void loadHistory();
+              }}
+            >
+              Refresh
+            </Button>
+          </Stack>
         </Toolbar>
       </AppBar>
 
@@ -208,7 +272,7 @@ export default function App() {
                   Parking Spots
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Click a row to inspect distance history.
+                  Live updates are pushed via SignalR. Click a row to inspect history.
                 </Typography>
               </Box>
 
@@ -260,6 +324,9 @@ export default function App() {
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {selectedSpot ? `Device: ${selectedSpot.deviceId}` : "Select a spot"}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    History updates on demand via the Refresh button.
                   </Typography>
                 </Box>
 
