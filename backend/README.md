@@ -1,58 +1,103 @@
-﻿# Masters.Api
+# Masters.Api - Parking Monitoring
 
-The project was generated using the [Clean.Architecture.Solution.Template](https://github.com/jasontaylordev/CleanArchitecture) version 9.0.12.
+Monorepo backend for IoT parking monitoring:
+- `src/Web` - HTTP API (`/api/*`) + SignalR hub (`/hubs/parking`)
+- `src/Worker` - Azure IoT Hub Event Hub consumer that persists telemetry to SQL Server
+- `src/Infrastructure` - EF Core + SQL Server storage
+- `../frontend` - React + Vite + MUI dashboard
+
+## Prerequisites
+
+- .NET SDK `9.0.100`
+- SQL Server / LocalDB (default: `(localdb)\\mssqllocaldb`)
+- Node.js `20.19+` or `22.12+` for Vite 7 (Node 21 may work with warnings)
 
 ## Build
 
-Run `dotnet build -tl` to build the solution.
+```bash
+cd .\backend
+dotnet build Masters.Api.sln -tl
+```
 
-## Run
+## Database Setup
 
-To run the web application:
+Apply migrations before first run:
 
 ```bash
-cd .\src\Web\
-dotnet watch run
+cd .\backend
+dotnet ef database update --project .\src\Infrastructure --startup-project .\src\Web
 ```
 
-Navigate to https://localhost:5001. The application will automatically reload if you change any of the source files.
-
-## Code Styles & Formatting
-
-The template includes [EditorConfig](https://editorconfig.org/) support to help maintain consistent coding styles for multiple developers working on the same project across various editors and IDEs. The **.editorconfig** file defines the coding styles applicable to this solution.
-
-## Code Scaffolding
-
-The template includes support to scaffold new commands and queries.
-
-Start in the `.\src\Application\` folder.
-
-Create a new command:
-
-```
-dotnet new ca-usecase --name CreateTodoList --feature-name TodoLists --usecase-type command --return-type int
-```
-
-Create a new query:
-
-```
-dotnet new ca-usecase -n GetTodos -fn TodoLists -ut query -rt TodosVm
-```
-
-If you encounter the error *"No templates or subcommands found matching: 'ca-usecase'."*, install the template and try again:
+## Run Backend API
 
 ```bash
-dotnet new install Clean.Architecture.Solution.Template::9.0.12
+cd .\backend\src\Web
+dotnet run
 ```
 
-## Test
+API base URL (development): `http://localhost:5000` (also `https://localhost:5001`)
 
-The solution contains unit, integration, and functional tests.
+## Run Worker
 
-To run the tests:
 ```bash
-dotnet test
+cd .\backend\src\Worker
+dotnet run
 ```
 
-## Help
-To learn more about the template go to the [project website](https://github.com/jasontaylordev/CleanArchitecture). Here you can find additional guidance, request new features, report a bug, and discuss the template with other users.
+Worker config file: `src/Worker/appsettings.json`
+
+Important settings:
+- `ConnectionStrings:Masters.ApiDb`
+- `RealtimeEventHub:Enabled`
+- `RealtimeEventHub:ConnectionString`
+- `RealtimeEventHub:EventHubName`
+- `RealtimeEventHub:ConsumerGroup`
+
+Set `RealtimeEventHub:Enabled` to `true` to consume IoT Hub telemetry.
+
+Expected telemetry payload:
+
+```json
+{
+  "deviceId": "ps-uzh-lot1-spot001",
+  "ts": 1735689600,
+  "distanceCm": 37.4,
+  "occupied": true
+}
+```
+
+## Run Frontend Dashboard
+
+```bash
+cd .\frontend
+npm install
+npm run dev
+```
+
+Frontend default URL: `http://localhost:5173`
+
+Optional env var for API target:
+- `VITE_API_BASE_URL` (default: `http://localhost:5000`)
+
+## API Endpoints
+
+- `GET /api/dashboard/summary`
+- `GET /api/spots`
+- `GET /api/spots/{spotId}/history?fromUtc=&toUtc=&maxPoints=`
+- `SignalR hub: /hubs/parking` (`dashboardSnapshot` event)
+
+## Tests
+
+Run backend tests:
+
+```bash
+cd .\backend
+dotnet test Masters.Api.sln -tl
+```
+
+Run frontend production build check:
+
+```bash
+cd .\frontend
+npm run build
+```
