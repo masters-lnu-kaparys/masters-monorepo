@@ -1,13 +1,9 @@
-using Masters.Api.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using Masters.Api.Web.Services;
 
 namespace Masters.Api.Web.Endpoints;
 
 public sealed class Spots : EndpointGroupBase
 {
-    private const int DefaultMaxPoints = 1000;
-    private const int AbsoluteMaxPoints = 10000;
-
     public override string GroupName => "spots";
 
     public override void Map(RouteGroupBuilder groupBuilder)
@@ -16,20 +12,11 @@ public sealed class Spots : EndpointGroupBase
         groupBuilder.MapGet(GetSpotHistory, "{spotId:long}/history");
     }
 
-    private static async Task<List<SpotStateDto>> GetSpots(
-        ApplicationDbContext dbContext,
+    private static Task<List<Models.SpotStateDto>> GetSpots(
+        IParkingReadService parkingReadService,
         CancellationToken cancellationToken)
     {
-        return await dbContext.ParkingSpots
-            .OrderBy(x => x.DeviceId)
-            .Select(x => new SpotStateDto(
-                x.Id,
-                x.DeviceId,
-                x.DisplayName,
-                x.IsOccupied,
-                x.LastDistanceCm,
-                x.LastTelemetryAtUtc))
-            .ToListAsync(cancellationToken);
+        return parkingReadService.GetSpotsAsync(cancellationToken);
     }
 
     private static async Task<IResult> GetSpotHistory(
@@ -37,65 +24,18 @@ public sealed class Spots : EndpointGroupBase
         DateTimeOffset? fromUtc,
         DateTimeOffset? toUtc,
         int? maxPoints,
-        TimeProvider timeProvider,
-        ApplicationDbContext dbContext,
+        IParkingReadService parkingReadService,
         CancellationToken cancellationToken)
     {
-        var spotExists = await dbContext.ParkingSpots
-            .AnyAsync(x => x.Id == spotId, cancellationToken);
-
-        if (!spotExists)
-        {
-            return TypedResults.NotFound();
-        }
-
-        var resolvedToUtc = toUtc?.ToUniversalTime() ?? timeProvider.GetUtcNow();
-        var resolvedFromUtc = fromUtc?.ToUniversalTime() ?? resolvedToUtc.AddHours(-24);
-
-        if (resolvedFromUtc > resolvedToUtc)
-        {
-            (resolvedFromUtc, resolvedToUtc) = (resolvedToUtc, resolvedFromUtc);
-        }
-
-        var resolvedMaxPoints = maxPoints.GetValueOrDefault(DefaultMaxPoints);
-        resolvedMaxPoints = Math.Clamp(resolvedMaxPoints, 1, AbsoluteMaxPoints);
-
-        var points = await dbContext.ParkingTelemetries
-            .Where(x => x.ParkingSpotId == spotId)
-            .Where(x => x.MeasuredAtUtc >= resolvedFromUtc && x.MeasuredAtUtc <= resolvedToUtc)
-            .OrderByDescending(x => x.MeasuredAtUtc)
-            .Take(resolvedMaxPoints)
-            .Select(x => new SpotHistoryPointDto(
-                x.MeasuredAtUtc,
-                x.DistanceCm,
-                x.Occupied))
-            .ToListAsync(cancellationToken);
-
-        points.Reverse();
-
-        return TypedResults.Ok(new SpotHistoryDto(
+        var history = await parkingReadService.GetSpotHistoryAsync(
             spotId,
-            resolvedFromUtc,
-            resolvedToUtc,
-            points));
+            fromUtc,
+            toUtc,
+            maxPoints,
+            cancellationToken);
+
+        return history is null
+            ? TypedResults.NotFound()
+            : TypedResults.Ok(history);
     }
-
-    private sealed record SpotStateDto(
-        long Id,
-        string DeviceId,
-        string DisplayName,
-        bool Occupied,
-        double? DistanceCm,
-        DateTimeOffset? LastTelemetryAtUtc);
-
-    private sealed record SpotHistoryDto(
-        long SpotId,
-        DateTimeOffset FromUtc,
-        DateTimeOffset ToUtc,
-        IReadOnlyList<SpotHistoryPointDto> Points);
-
-    private sealed record SpotHistoryPointDto(
-        DateTimeOffset MeasuredAtUtc,
-        double DistanceCm,
-        bool Occupied);
 }

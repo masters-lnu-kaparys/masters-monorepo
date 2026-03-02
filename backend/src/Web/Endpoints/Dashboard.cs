@@ -1,5 +1,4 @@
-using Masters.Api.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using Masters.Api.Web.Services;
 
 namespace Masters.Api.Web.Endpoints;
 
@@ -12,34 +11,10 @@ public sealed class Dashboard : EndpointGroupBase
         groupBuilder.MapGet(GetSummary, "summary");
     }
 
-    private static async Task<DashboardSummaryDto> GetSummary(
-        ApplicationDbContext dbContext,
+    private static Task<Models.DashboardSummaryDto> GetSummary(
+        IParkingReadService parkingReadService,
         CancellationToken cancellationToken)
     {
-        var totalSpots = await dbContext.ParkingSpots.CountAsync(cancellationToken);
-        var occupiedSpots = await dbContext.ParkingSpots.CountAsync(x => x.IsOccupied, cancellationToken);
-        var freeSpots = totalSpots - occupiedSpots;
-
-        var lastTelemetryAtUtc = await dbContext.ParkingTelemetries
-            .Select(x => (DateTimeOffset?)x.MeasuredAtUtc)
-            .MaxAsync(cancellationToken);
-
-        var occupancyRate = totalSpots == 0
-            ? 0
-            : (double)occupiedSpots / totalSpots;
-
-        return new DashboardSummaryDto(
-            totalSpots,
-            occupiedSpots,
-            freeSpots,
-            occupancyRate,
-            lastTelemetryAtUtc);
+        return parkingReadService.GetSummaryAsync(cancellationToken);
     }
-
-    private sealed record DashboardSummaryDto(
-        int TotalSpots,
-        int OccupiedSpots,
-        int FreeSpots,
-        double OccupancyRate,
-        DateTimeOffset? LastTelemetryAtUtc);
 }
