@@ -18,8 +18,14 @@ public sealed class ParkingSpotConfiguration : IEntityTypeConfiguration<ParkingS
             .HasMaxLength(128)
             .IsRequired();
 
+        builder.Property(x => x.SourceKind)
+            .HasConversion<int>()
+            .IsRequired();
+
         builder.HasIndex(x => x.DeviceId)
             .IsUnique();
+
+        builder.HasIndex(x => new { x.ParkingLotId, x.DisplayName });
 
         builder.HasMany(x => x.TelemetryEntries)
             .WithOne(x => x.ParkingSpot)

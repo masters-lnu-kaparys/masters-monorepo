@@ -22,6 +22,55 @@ namespace Masters.Api.Infrastructure.Data.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Masters.Api.Domain.Entities.ParkingLot", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Address")
+                        .IsRequired()
+                        .HasMaxLength(256)
+                        .HasColumnType("nvarchar(256)");
+
+                    b.Property<string>("City")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<double>("Latitude")
+                        .HasColumnType("float");
+
+                    b.Property<double>("Longitude")
+                        .HasColumnType("float");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("City", "Name")
+                        .IsUnique();
+
+                    b.ToTable("ParkingLots", (string)null);
+                });
+
             modelBuilder.Entity("Masters.Api.Domain.Entities.ParkingSpot", b =>
                 {
                     b.Property<long>("Id")
@@ -61,10 +110,18 @@ namespace Masters.Api.Infrastructure.Data.Migrations
                     b.Property<DateTimeOffset?>("LastTelemetryAtUtc")
                         .HasColumnType("datetimeoffset");
 
+                    b.Property<long>("ParkingLotId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("SourceKind")
+                        .HasColumnType("int");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DeviceId")
                         .IsUnique();
+
+                    b.HasIndex("ParkingLotId", "DisplayName");
 
                     b.ToTable("ParkingSpots", (string)null);
                 });
@@ -102,6 +159,17 @@ namespace Masters.Api.Infrastructure.Data.Migrations
                     b.ToTable("ParkingTelemetry", (string)null);
                 });
 
+            modelBuilder.Entity("Masters.Api.Domain.Entities.ParkingSpot", b =>
+                {
+                    b.HasOne("Masters.Api.Domain.Entities.ParkingLot", "ParkingLot")
+                        .WithMany("Spots")
+                        .HasForeignKey("ParkingLotId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ParkingLot");
+                });
+
             modelBuilder.Entity("Masters.Api.Domain.Entities.ParkingTelemetry", b =>
                 {
                     b.HasOne("Masters.Api.Domain.Entities.ParkingSpot", "ParkingSpot")
@@ -111,6 +179,11 @@ namespace Masters.Api.Infrastructure.Data.Migrations
                         .IsRequired();
 
                     b.Navigation("ParkingSpot");
+                });
+
+            modelBuilder.Entity("Masters.Api.Domain.Entities.ParkingLot", b =>
+                {
+                    b.Navigation("Spots");
                 });
 
             modelBuilder.Entity("Masters.Api.Domain.Entities.ParkingSpot", b =>

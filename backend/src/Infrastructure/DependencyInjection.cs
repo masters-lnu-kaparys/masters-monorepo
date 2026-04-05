@@ -1,6 +1,7 @@
 ﻿using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Infrastructure.Data;
 using Masters.Api.Infrastructure.Data.Interceptors;
+using Masters.Api.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,9 @@ public static class DependencyInjection
     {
         var connectionString = builder.Configuration.GetConnectionString("Masters.ApiDb");
         Guard.Against.Null(connectionString, message: "Connection string 'Masters.ApiDb' not found.");
+
+        builder.Services.Configure<DemoMapOptions>(builder.Configuration.GetSection(DemoMapOptions.SectionName));
+        builder.Services.Configure<DemoTopologyOptions>(builder.Configuration.GetSection(DemoTopologyOptions.SectionName));
 
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
 
