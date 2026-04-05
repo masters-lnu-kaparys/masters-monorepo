@@ -1,7 +1,13 @@
 using Masters.Api.Application.Common.Interfaces;
+using Masters.Api.Application.Common.Security;
 using Masters.Api.Infrastructure.Data;
+using Masters.Api.Web.Options;
 using Masters.Api.Web.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Tokens;
+using NSwag;
+using NSwag.Generation.Processors.Security;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -11,7 +17,52 @@ public static class DependencyInjection
     {
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
+        builder.Services.Configure<Auth0Options>(builder.Configuration.GetSection(Auth0Options.SectionName));
+
+        var auth0Options = builder.Configuration
+            .GetSection(Auth0Options.SectionName)
+            .Get<Auth0Options>() ?? new Auth0Options();
+
+        var authority = auth0Options.Domain.StartsWith("https://", StringComparison.OrdinalIgnoreCase)
+            ? auth0Options.Domain.TrimEnd('/') + "/"
+            : $"https://{auth0Options.Domain.TrimEnd('/')}/";
+
+        builder.Services
+            .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+            .AddJwtBearer(options =>
+            {
+                options.Authority = authority;
+                options.Audience = auth0Options.Audience;
+                options.MapInboundClaims = false;
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    NameClaimType = "sub",
+                    RoleClaimType = auth0Options.RolesClaimType
+                };
+                options.Events = new JwtBearerEvents
+                {
+                    OnMessageReceived = context =>
+                    {
+                        var accessToken = context.Request.Query["access_token"];
+                        var path = context.HttpContext.Request.Path;
+
+                        if (!string.IsNullOrWhiteSpace(accessToken)
+                            && path.StartsWithSegments("/hubs/parking"))
+                        {
+                            context.Token = accessToken;
+                        }
+
+                        return Task.CompletedTask;
+                    }
+                };
+            });
+
+        builder.Services.AddAuthorizationBuilder()
+            .AddPolicy(Policies.UserAccess, policy => policy.RequireRole(Roles.User, Roles.Admin))
+            .AddPolicy(Policies.AdminAccess, policy => policy.RequireRole(Roles.Admin));
+
         builder.Services.AddScoped<IUser, CurrentUser>();
+        builder.Services.AddScoped<IUserAuthorizationService, UserAuthorizationService>();
         builder.Services.AddScoped<IParkingReadService, ParkingReadService>();
 
         builder.Services.AddHostedService<ParkingRealtimeBroadcaster>();
@@ -25,7 +76,8 @@ public static class DependencyInjection
         {
             var allowedOrigins = builder.Configuration
                 .GetSection("ClientSide:AllowedOrigins")
-                .Get<string[]>()!;
+                .Get<string[]>() ?? [];
+
             options.AddDefaultPolicy(
                 policy =>
                 {
@@ -48,6 +100,19 @@ public static class DependencyInjection
         builder.Services.AddOpenApiDocument(configure =>
         {
             configure.Title = "Masters.Api API";
+            configure.AddSecurity(
+                "Bearer",
+                [],
+                new OpenApiSecurityScheme
+                {
+                    Type = OpenApiSecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    In = OpenApiSecurityApiKeyLocation.Header,
+                    Name = "Authorization",
+                    Description = "Enter: Bearer {your JWT token}"
+                });
+            configure.OperationProcessors.Add(new AspNetCoreOperationSecurityScopeProcessor("Bearer"));
         });
     }
 }

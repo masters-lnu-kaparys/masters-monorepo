@@ -1,3 +1,4 @@
+using Masters.Api.Application.Common.Security;
 using Masters.Api.Web.Services;
 
 namespace Masters.Api.Web.Endpoints;
@@ -8,6 +9,7 @@ public sealed class Dashboard : EndpointGroupBase
 
     public override void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.RequireAuthorization(Policies.UserAccess);
         groupBuilder.MapGet(GetSummary, "summary");
     }
 

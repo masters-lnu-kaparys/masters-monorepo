@@ -1,3 +1,4 @@
+using Masters.Api.Application.Common.Security;
 using Masters.Api.Web.Services;
 using Microsoft.AspNetCore.Http.HttpResults;
 
@@ -9,6 +10,7 @@ public sealed class Spots : EndpointGroupBase
 
     public override void Map(RouteGroupBuilder groupBuilder)
     {
+        groupBuilder.RequireAuthorization(Policies.UserAccess);
         groupBuilder.MapGet(GetSpots);
         groupBuilder.MapGet(GetSpotHistory, "{spotId:long}/history");
     }

@@ -9,10 +9,12 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
     where TRequest : notnull
 {
     private readonly IUser _user;
+    private readonly IUserAuthorizationService _authorizationService;
 
-    public AuthorizationBehaviour(IUser user)
+    public AuthorizationBehaviour(IUser user, IUserAuthorizationService authorizationService)
     {
         _user = user;
+        _authorizationService = authorizationService;
     }
 
     public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
@@ -25,6 +27,30 @@ public class AuthorizationBehaviour<TRequest, TResponse> : IPipelineBehavior<TRe
             if (_user.Id == null)
             {
                 throw new UnauthorizedAccessException();
+            }
+
+            foreach (var authorizeAttribute in authorizeAttributes)
+            {
+                if (!string.IsNullOrWhiteSpace(authorizeAttribute.Roles))
+                {
+                    var authorizedRoles = authorizeAttribute.Roles
+                        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+                    if (!authorizedRoles.Any(_authorizationService.IsInRole))
+                    {
+                        throw new ForbiddenAccessException();
+                    }
+                }
+
+                if (!string.IsNullOrWhiteSpace(authorizeAttribute.Policy))
+                {
+                    var authorized = await _authorizationService.AuthorizeAsync(authorizeAttribute.Policy);
+
+                    if (!authorized)
+                    {
+                        throw new ForbiddenAccessException();
+                    }
+                }
             }
         }
 
