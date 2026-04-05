@@ -2,14 +2,11 @@ using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Infrastructure.Data;
 using Masters.Api.Web.Services;
 using Microsoft.AspNetCore.Mvc;
-using NSwag;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
 public static class DependencyInjection
 {
-    public const string FrontendCorsPolicy = "FrontendDevCors";
-
     public static void AddWebServices(this IHostApplicationBuilder builder)
     {
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
@@ -26,14 +23,19 @@ public static class DependencyInjection
 
         builder.Services.AddCors(options =>
         {
-            options.AddPolicy(FrontendCorsPolicy, policyBuilder =>
-            {
-                policyBuilder
-                    .WithOrigins("http://localhost:5173")
-                    .AllowAnyHeader()
-                    .AllowAnyMethod()
-                    .AllowCredentials();
-            });
+            var allowedOrigins = builder.Configuration
+                .GetSection("ClientSide:AllowedOrigins")
+                .Get<string[]>()!;
+            options.AddDefaultPolicy(
+                policy =>
+                {
+                    policy
+                        .SetIsOriginAllowedToAllowWildcardSubdomains()
+                        .WithOrigins(allowedOrigins)
+                        .AllowAnyMethod()
+                        .AllowAnyHeader()
+                        .AllowCredentials();
+                });
         });
 
         builder.Services.AddExceptionHandler<CustomExceptionHandler>();

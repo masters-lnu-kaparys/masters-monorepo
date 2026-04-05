@@ -1,3 +1,4 @@
+using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Infrastructure.Data;
 using Masters.Api.Worker;
 using Masters.Api.Worker.Options;
@@ -7,6 +8,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.Configure<RealtimeEventHubOptions>(builder.Configuration.GetSection(RealtimeEventHubOptions.SectionName));
 builder.AddInfrastructureServices();
+builder.Services.AddScoped<IUser, WorkerUser>();
 builder.Services.AddSingleton<TelemetryPayloadParser>();
 builder.Services.AddHostedService<Worker>();
 

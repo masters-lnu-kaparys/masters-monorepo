@@ -29,8 +29,6 @@ public static class DependencyInjection
 
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
 
-        builder.Services.AddAuthorizationBuilder();
-
         builder.Services.AddSingleton(TimeProvider.System);
     }
 }
