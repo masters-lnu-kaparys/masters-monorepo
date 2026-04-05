@@ -1,4 +1,4 @@
-import type { DashboardSummary, SpotHistory, SpotState } from "../types/api";
+import type { LotDetails, MapOverview, SpotHistory } from "../types/api";
 
 const DEFAULT_API_BASE_URL = "https://localhost:5001";
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
@@ -17,12 +17,12 @@ async function getJson<T>(path: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-export async function fetchDashboardSummary(): Promise<DashboardSummary> {
-  return getJson<DashboardSummary>("/api/dashboard/summary");
+export async function fetchMapOverview(): Promise<MapOverview> {
+  return getJson<MapOverview>("/api/map/overview");
 }
 
-export async function fetchSpots(): Promise<SpotState[]> {
-  return getJson<SpotState[]>("/api/spots");
+export async function fetchLotDetails(lotId: number): Promise<LotDetails> {
+  return getJson<LotDetails>(`/api/lots/${lotId}`);
 }
 
 export async function fetchSpotHistory(

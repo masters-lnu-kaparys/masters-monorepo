@@ -1,42 +1,72 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.map-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 560px;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.map-overlay {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 500;
+  pointer-events: none;
+  width: min(720px, calc(100% - 40px));
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
+.map-overlay > * {
+  pointer-events: auto;
+}
+
+.map-empty-state {
+  position: absolute;
+  inset: auto 24px 24px 24px;
+  z-index: 500;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.map-empty-state > * {
+  pointer-events: auto;
+}
+
+.map-tooltip {
+  border: none;
+  border-radius: 16px;
+  background: rgba(255, 253, 247, 0.95);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);
+  color: #111827;
+  padding: 0;
+}
+
+.map-tooltip .leaflet-tooltip-content {
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.map-tooltip h4 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+
+.map-tooltip p {
+  margin: 0;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+@media (max-width: 900px) {
+  .map-card {
+    min-height: 420px;
   }
-  to {
-    transform: rotate(360deg);
+
+  .map-overlay {
+    left: 14px;
+    top: 14px;
+    width: calc(100% - 28px);
   }
-}
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
+  .map-empty-state {
+    inset: auto 14px 14px 14px;
   }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
 }

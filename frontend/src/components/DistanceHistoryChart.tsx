@@ -1,4 +1,4 @@
-import { Box, Typography } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import type { SpotHistoryPoint } from "../types/api";
 
 type DistanceHistoryChartProps = {
@@ -37,39 +37,47 @@ export function DistanceHistoryChart({ points }: DistanceHistoryChartProps) {
         sx={{
           border: "1px dashed",
           borderColor: "divider",
-          borderRadius: 2,
+          borderRadius: 3,
           p: 3,
           textAlign: "center",
+          bgcolor: "rgba(255,255,255,0.72)",
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          No telemetry points in selected range.
+          Поки що немає достатньо вимірювань для цього місця.
         </Typography>
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        border: "1px solid",
-        borderColor: "divider",
-        borderRadius: 2,
-        p: 1,
-        background:
-          "linear-gradient(180deg, rgba(12,74,110,0.06) 0%, rgba(2,132,199,0.02) 100%)",
-      }}
-    >
-      <svg width="100%" height="220" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Distance history chart">
-        <polyline
-          fill="none"
-          stroke="#0284c7"
-          strokeWidth="3"
-          strokeLinejoin="round"
-          strokeLinecap="round"
-          points={normalizePoints(points)}
-        />
-      </svg>
-    </Box>
+    <Stack spacing={1.5}>
+      <Box
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 3,
+          p: 1,
+          bgcolor: "rgba(255,255,255,0.74)",
+          background:
+            "linear-gradient(180deg, rgba(17,97,73,0.12) 0%, rgba(217,119,6,0.06) 100%)",
+        }}
+      >
+        <svg width="100%" height="220" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Історія вимірювань">
+          <polyline
+            fill="none"
+            stroke="#116149"
+            strokeWidth="3"
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            points={normalizePoints(points)}
+          />
+        </svg>
+      </Box>
+
+      <Typography variant="caption" color="text.secondary">
+        Відстань до об'єкта в сантиметрах за останні точки спостереження.
+      </Typography>
+    </Stack>
   );
 }
