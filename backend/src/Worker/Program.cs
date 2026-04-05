@@ -7,10 +7,13 @@ using Masters.Api.Worker.Services;
 var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.Configure<RealtimeEventHubOptions>(builder.Configuration.GetSection(RealtimeEventHubOptions.SectionName));
+builder.Services.Configure<SimulationOptions>(builder.Configuration.GetSection(SimulationOptions.SectionName));
 builder.AddInfrastructureServices();
 builder.Services.AddScoped<IUser, WorkerUser>();
 builder.Services.AddSingleton<TelemetryPayloadParser>();
+builder.Services.AddScoped<IParkingTelemetryWriter, ParkingTelemetryWriter>();
 builder.Services.AddHostedService<Worker>();
+builder.Services.AddHostedService<ParkingSimulationService>();
 
 var host = builder.Build();
 

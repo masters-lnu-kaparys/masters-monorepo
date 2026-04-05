@@ -1,11 +1,8 @@
 using Azure.Messaging.EventHubs.Consumer;
-using Masters.Api.Domain.Entities;
-using Masters.Api.Infrastructure.Data;
+using Masters.Api.Domain.Enums;
 using Masters.Api.Worker.Models;
 using Masters.Api.Worker.Options;
 using Masters.Api.Worker.Services;
-using Microsoft.Data.SqlClient;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace Masters.Api.Worker;
@@ -16,20 +13,17 @@ public sealed class Worker : BackgroundService
 
     private readonly ILogger<Worker> _logger;
     private readonly IServiceScopeFactory _scopeFactory;
-    private readonly TimeProvider _timeProvider;
     private readonly TelemetryPayloadParser _payloadParser;
     private readonly RealtimeEventHubOptions _options;
 
     public Worker(
         ILogger<Worker> logger,
         IServiceScopeFactory scopeFactory,
-        TimeProvider timeProvider,
         TelemetryPayloadParser payloadParser,
         IOptions<RealtimeEventHubOptions> options)
     {
         _logger = logger;
         _scopeFactory = scopeFactory;
-        _timeProvider = timeProvider;
         _payloadParser = payloadParser;
         _options = options.Value;
     }
@@ -98,54 +92,29 @@ public sealed class Worker : BackgroundService
     private async Task PersistTelemetryAsync(DeviceTelemetryMessage message, CancellationToken stoppingToken)
     {
         using var scope = _scopeFactory.CreateScope();
-        var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var telemetryWriter = scope.ServiceProvider.GetRequiredService<IParkingTelemetryWriter>();
+        var result = await telemetryWriter.WriteAsync(message, SpotSourceKind.Real, stoppingToken);
 
-        var spot = await dbContext.ParkingSpots
-            .SingleOrDefaultAsync(x => x.DeviceId == message.DeviceId, stoppingToken);
-
-        if (spot is null)
+        switch (result.Outcome)
         {
-            spot = new ParkingSpot
-            {
-                DeviceId = message.DeviceId,
-                DisplayName = message.DeviceId
-            };
+            case TelemetryWriteOutcome.Duplicate:
+                _logger.LogDebug(
+                    "Skipped duplicate reading for device {DeviceId} at {MeasuredAtUtc}.",
+                    message.DeviceId,
+                    message.MeasuredAtUtc);
+                break;
 
-            dbContext.ParkingSpots.Add(spot);
+            case TelemetryWriteOutcome.SourceMismatch:
+                _logger.LogWarning(
+                    "Rejected Event Hub update for device {DeviceId} because the spot belongs to another source.",
+                    message.DeviceId);
+                break;
+
+            case TelemetryWriteOutcome.UnknownSpot:
+                _logger.LogWarning(
+                    "Rejected Event Hub update for device {DeviceId} because no mapped spot or lot is available.",
+                    message.DeviceId);
+                break;
         }
-
-        var receivedAtUtc = _timeProvider.GetUtcNow();
-
-        spot.IsOccupied = message.Occupied;
-        spot.LastDistanceCm = message.DistanceCm;
-        spot.LastTelemetryAtUtc = message.MeasuredAtUtc;
-
-        dbContext.ParkingTelemetries.Add(new ParkingTelemetry
-        {
-            ParkingSpot = spot,
-            MeasuredAtUtc = message.MeasuredAtUtc,
-            ReceivedAtUtc = receivedAtUtc,
-            DistanceCm = message.DistanceCm,
-            Occupied = message.Occupied
-        });
-
-        try
-        {
-            await dbContext.SaveChangesAsync(stoppingToken);
-        }
-        catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
-        {
-            dbContext.ChangeTracker.Clear();
-            _logger.LogDebug(
-                "Skipped duplicate telemetry for device {DeviceId} at {MeasuredAtUtc}.",
-                message.DeviceId,
-                message.MeasuredAtUtc);
-        }
-    }
-
-    private static bool IsUniqueConstraintViolation(DbUpdateException ex)
-    {
-        return ex.InnerException is SqlException sqlException
-            && (sqlException.Number == 2601 || sqlException.Number == 2627);
     }
 }
