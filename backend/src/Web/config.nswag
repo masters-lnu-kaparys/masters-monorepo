@@ -46,7 +46,7 @@
       "serializerSettingsType": null,
       "useDocumentProvider": true,
       "documentName": "v1",
-      "aspNetCoreEnvironment": null,
+      "aspNetCoreEnvironment": "OpenApiGeneration",
       "createWebHostBuilderMethod": null,
       "startupType": null,
       "allowNullableBodyParameters": true,

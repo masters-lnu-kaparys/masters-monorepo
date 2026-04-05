@@ -1,4 +1,5 @@
 using Masters.Api.Web.Services;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace Masters.Api.Web.Endpoints;
 
@@ -19,7 +20,7 @@ public sealed class Spots : EndpointGroupBase
         return parkingReadService.GetSpotsAsync(cancellationToken);
     }
 
-    private static async Task<IResult> GetSpotHistory(
+    private static async Task<Results<Ok<Models.SpotHistoryDto>, NotFound>> GetSpotHistory(
         long spotId,
         DateTimeOffset? fromUtc,
         DateTimeOffset? toUtc,

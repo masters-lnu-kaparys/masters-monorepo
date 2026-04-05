@@ -50,8 +50,12 @@ public sealed class ParkingRealtimeBroadcaster : BackgroundService
         using var scope = _scopeFactory.CreateScope();
         var readService = scope.ServiceProvider.GetRequiredService<IParkingReadService>();
 
-        var snapshot = await readService.GetSnapshotAsync(cancellationToken);
-        var signature = JsonSerializer.Serialize(snapshot);
+        var snapshot = await readService.GetMapSnapshotAsync(cancellationToken);
+        var signature = JsonSerializer.Serialize(new
+        {
+            snapshot.Summary,
+            snapshot.Lots
+        });
 
         if (signature == _lastSnapshotSignature)
         {
@@ -60,6 +64,6 @@ public sealed class ParkingRealtimeBroadcaster : BackgroundService
 
         _lastSnapshotSignature = signature;
 
-        await _hubContext.Clients.All.SendAsync("dashboardSnapshot", snapshot, cancellationToken);
+        await _hubContext.Clients.All.SendAsync("mapSnapshot", snapshot, cancellationToken);
     }
 }
