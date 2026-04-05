@@ -1,28 +1,18 @@
-import type { LotDetails, MapOverview, SpotHistory } from "../types/api";
-
-const DEFAULT_API_BASE_URL = "https://localhost:5001";
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
-
-async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(`${apiBaseUrl}${path}`, {
-    headers: {
-      Accept: "application/json",
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Request failed: ${response.status} ${response.statusText}`);
-  }
-
-  return (await response.json()) as T;
-}
+import type {
+  AdminParkingLot,
+  MapOverview,
+  SpotHistory,
+  UpsertParkingLotInput,
+  UpsertParkingSpotInput,
+} from "../types/api";
+import { deleteJson, getJson, postJson, putJson } from "./http";
 
 export async function fetchMapOverview(): Promise<MapOverview> {
   return getJson<MapOverview>("/api/map/overview");
 }
 
-export async function fetchLotDetails(lotId: number): Promise<LotDetails> {
-  return getJson<LotDetails>(`/api/lots/${lotId}`);
+export async function fetchLotDetails(lotId: number) {
+  return getJson(`/api/lots/${lotId}`);
 }
 
 export async function fetchSpotHistory(
@@ -53,4 +43,30 @@ export async function fetchSpotHistory(
   return getJson<SpotHistory>(`/api/spots/${spotId}/history${suffix}`);
 }
 
-export { apiBaseUrl };
+export async function fetchAdminLots(): Promise<AdminParkingLot[]> {
+  return getJson<AdminParkingLot[]>("/api/admin/lots");
+}
+
+export async function createAdminLot(input: UpsertParkingLotInput): Promise<number> {
+  return postJson<number, UpsertParkingLotInput>("/api/admin/lots", input);
+}
+
+export async function updateAdminLot(lotId: number, input: UpsertParkingLotInput): Promise<void> {
+  await putJson(`/api/admin/lots/${lotId}`, input);
+}
+
+export async function deleteAdminLot(lotId: number): Promise<void> {
+  await deleteJson(`/api/admin/lots/${lotId}`);
+}
+
+export async function createAdminSpot(lotId: number, input: UpsertParkingSpotInput): Promise<number> {
+  return postJson<number, UpsertParkingSpotInput>(`/api/admin/lots/${lotId}/spots`, input);
+}
+
+export async function updateAdminSpot(spotId: number, input: UpsertParkingSpotInput): Promise<void> {
+  await putJson(`/api/admin/spots/${spotId}`, input);
+}
+
+export async function deleteAdminSpot(spotId: number): Promise<void> {
+  await deleteJson(`/api/admin/spots/${spotId}`);
+}

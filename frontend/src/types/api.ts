@@ -1,3 +1,10 @@
+export const SPOT_SOURCE = {
+  REAL: 1,
+  SIMULATED: 2,
+} as const;
+
+export type SpotSourceKind = (typeof SPOT_SOURCE)[keyof typeof SPOT_SOURCE];
+
 export type MapCenter = {
   latitude: number;
   longitude: number;
@@ -85,4 +92,41 @@ export type MapSnapshot = {
   generatedAtUtc: string;
   summary: MapSummary;
   lots: ParkingLotMap[];
+};
+
+export type AdminParkingSpot = {
+  id: number;
+  displayName: string;
+  deviceId: string;
+  sourceKind: SpotSourceKind;
+  occupied: boolean;
+  distanceCm: number | null;
+  lastTelemetryAtUtc: string | null;
+};
+
+export type AdminParkingLot = {
+  id: number;
+  name: string;
+  city: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  totalSpots: number;
+  occupiedSpots: number;
+  freeSpots: number;
+  spots: AdminParkingSpot[];
+};
+
+export type UpsertParkingLotInput = {
+  name: string;
+  city: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+};
+
+export type UpsertParkingSpotInput = {
+  displayName: string;
+  sourceKind: SpotSourceKind;
+  deviceId: string | null;
 };

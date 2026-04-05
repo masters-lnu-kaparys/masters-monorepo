@@ -1,8 +1,12 @@
+import { Auth0Provider } from "@auth0/auth0-react";
+import { BrowserRouter } from "react-router-dom";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "leaflet/dist/leaflet.css";
 import App from "./App";
+import { getAuth0RuntimeConfig } from "./auth/config";
+import { FullScreenStatus } from "./components/FullScreenStatus";
 import "./index.css";
 
 const theme = createTheme({
@@ -76,11 +80,44 @@ const theme = createTheme({
   },
 });
 
-createRoot(document.getElementById("root")!).render(
+const auth0Config = getAuth0RuntimeConfig();
+
+const root = (
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      {auth0Config ? (
+        <Auth0Provider
+          domain={auth0Config.domain}
+          clientId={auth0Config.clientId}
+          cacheLocation="localstorage"
+          useRefreshTokens
+          authorizationParams={{
+            redirect_uri: window.location.origin,
+            audience: auth0Config.audience,
+            scope: "openid profile email",
+          }}
+          onRedirectCallback={(appState) => {
+            const nextPath = typeof appState?.returnTo === "string"
+              ? appState.returnTo
+              : window.location.pathname;
+
+            window.history.replaceState({}, document.title, nextPath);
+          }}
+        >
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </Auth0Provider>
+      ) : (
+        <FullScreenStatus
+          title="Потрібно налаштувати Auth0"
+          description="Додай VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID і VITE_AUTH0_AUDIENCE у frontend env, а також Auth0:Domain і Auth0:Audience у backend appsettings."
+          severity="warning"
+        />
+      )}
     </ThemeProvider>
-  </StrictMode>,
+  </StrictMode>
 );
+
+createRoot(document.getElementById("root")!).render(root);
