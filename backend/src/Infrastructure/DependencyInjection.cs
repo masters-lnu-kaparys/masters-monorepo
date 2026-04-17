@@ -13,8 +13,8 @@ public static class DependencyInjection
 {
     public static void AddInfrastructureServices(this IHostApplicationBuilder builder)
     {
-        var connectionString = builder.Configuration.GetConnectionString("Masters.ApiDb");
-        Guard.Against.Null(connectionString, message: "Connection string 'Masters.ApiDb' not found.");
+        var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+        Guard.Against.Null(connectionString, message: "Connection string 'DefaultConnection' not found.");
 
         builder.Services.Configure<DemoMapOptions>(builder.Configuration.GetSection(DemoMapOptions.SectionName));
         builder.Services.Configure<DemoTopologyOptions>(builder.Configuration.GetSection(DemoTopologyOptions.SectionName));

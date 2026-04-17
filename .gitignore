@@ -1,0 +1,4 @@
+/backend/src/Web/appsettings.Development.json
+/backend/src/Worker/appsettings.Development.json
+/frontend/.env
+**/objtemp/
