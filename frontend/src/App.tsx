@@ -2,12 +2,13 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { configureApiClient, resetApiClient } from "./api/http";
-import { readUserRoles } from "./auth/config";
+import { getEffectiveUserRoles } from "./auth/config";
 import { AppShell } from "./components/AppShell";
 import { FullScreenStatus } from "./components/FullScreenStatus";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { AdminPage } from "./pages/AdminPage";
 import { ForbiddenPage } from "./pages/ForbiddenPage";
+import { LoginPage } from "./pages/LoginPage";
 import { MonitoringPage } from "./pages/MonitoringPage";
 import "./App.css";
 
@@ -16,7 +17,7 @@ export default function App() {
   const navigate = useNavigate();
   const [clientReady, setClientReady] = useState(false);
 
-  const roles = useMemo(() => readUserRoles(user as Record<string, unknown> | undefined), [user]);
+  const roles = useMemo(() => getEffectiveUserRoles(user as Record<string, unknown> | undefined), [user]);
   const isAdmin = roles.includes("Admin");
   const userName = user?.name ?? user?.email ?? user?.nickname ?? "Користувач";
 
@@ -57,10 +58,11 @@ export default function App() {
 
   return (
     <Routes>
+      <Route path="/login" element={<LoginPage />} />
       <Route path="/forbidden" element={<ForbiddenPage />} />
       <Route
         element={(
-          <ProtectedRoute allowedRoles={["User", "Admin"]}>
+          <ProtectedRoute>
             <AppShell
               isAdmin={isAdmin}
               userName={userName}

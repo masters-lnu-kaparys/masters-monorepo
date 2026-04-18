@@ -28,10 +28,10 @@ export function ForbiddenPage() {
           <BlockRoundedIcon sx={{ fontSize: 52, color: "error.main" }} />
           <Typography variant="h4">Недостатньо прав доступу</Typography>
           <Typography color="text.secondary">
-            Ваш обліковий запис увійшов успішно, але для цієї сторінки потрібна роль Admin.
+            Ви вже маєте базовий доступ до карти та моніторингу, але для цієї сторінки потрібна роль Admin.
           </Typography>
           <Alert severity="warning" sx={{ width: "100%", textAlign: "left" }}>
-            Якщо доступ має бути, признач роль через Auth0 Dashboard і виконай повторний вхід.
+            Якщо доступ має бути, признач роль через Auth0 Dashboard і виконай повторний вхід, щоб отримати новий токен.
           </Alert>
           <Button component={RouterLink} to="/" variant="contained">
             Повернутися до карти

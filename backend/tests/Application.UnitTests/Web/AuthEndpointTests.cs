@@ -58,6 +58,38 @@ public class AuthEndpointTests
     }
 
     [Test]
+    public async Task ShouldAllowAuthenticatedUserWithoutExplicitRoleToReadProtectedMapOverview()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        await factory.SeedAsync(
+            new ParkingLot
+            {
+                Name = "Підзамче",
+                City = "Львів",
+                Address = "вул. Богдана Хмельницького, 124",
+                Latitude = 49.8501d,
+                Longitude = 24.0376d,
+                Spots =
+                {
+                    new ParkingSpot
+                    {
+                        DeviceId = "ps-lviv-002",
+                        DisplayName = "Місце 02",
+                        SourceKind = SpotSourceKind.Real,
+                        IsOccupied = true,
+                    }
+                }
+            });
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "auth0|user-2");
+
+        var response = await client.GetAsync("/api/map/overview");
+
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Test]
     public async Task ShouldReturnForbiddenForUserOnAdminEndpoint()
     {
         await using var factory = new TestWebApplicationFactory();

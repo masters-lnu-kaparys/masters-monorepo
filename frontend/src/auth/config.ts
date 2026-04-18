@@ -46,3 +46,16 @@ export function readUserRoles(
 
   return [];
 }
+
+export function getEffectiveUserRoles(
+  claims: Record<string, unknown> | undefined,
+  roleClaimType = AUTH0_ROLE_CLAIM,
+): string[] {
+  const explicitRoles = readUserRoles(claims, roleClaimType);
+
+  if (explicitRoles.length > 0) {
+    return explicitRoles;
+  }
+
+  return claims ? ["User"] : [];
+}

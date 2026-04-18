@@ -58,7 +58,7 @@ public static class DependencyInjection
             });
 
         builder.Services.AddAuthorizationBuilder()
-            .AddPolicy(Policies.UserAccess, policy => policy.RequireRole(Roles.User, Roles.Admin))
+            .AddPolicy(Policies.UserAccess, policy => policy.RequireAuthenticatedUser())
             .AddPolicy(Policies.AdminAccess, policy => policy.RequireRole(Roles.Admin));
 
         builder.Services.AddScoped<IUser, CurrentUser>();
