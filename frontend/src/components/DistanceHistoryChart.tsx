@@ -40,7 +40,7 @@ export function DistanceHistoryChart({ points }: DistanceHistoryChartProps) {
         sx={{
           border: "1px dashed",
           borderColor: "divider",
-          borderRadius: 3,
+          borderRadius: "10px",
           p: 3,
           textAlign: "center",
           bgcolor: "rgba(255,255,255,0.72)",
@@ -59,7 +59,7 @@ export function DistanceHistoryChart({ points }: DistanceHistoryChartProps) {
         sx={{
           border: "1px solid",
           borderColor: "divider",
-          borderRadius: 3,
+          borderRadius: "10px",
           p: 1,
           bgcolor: "rgba(255,255,255,0.74)",
           background:

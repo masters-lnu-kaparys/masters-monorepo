@@ -10,7 +10,6 @@ import {
   Alert,
   Box,
   Button,
-  Chip,
   CircularProgress,
   Container,
   Divider,
@@ -22,7 +21,7 @@ import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import type { LatLngExpression } from "leaflet";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, ZoomControl } from "react-leaflet";
+import { CircleMarker, MapContainer, TileLayer, useMap, ZoomControl } from "react-leaflet";
 import { fetchLotDetails, fetchMapOverview, fetchSpotHistory } from "../api/client";
 import { apiBaseUrl, requestAccessToken } from "../api/http";
 import { DistanceHistoryChart } from "../components/DistanceHistoryChart";
@@ -54,29 +53,33 @@ function SummaryCard({
   title,
   value,
   icon,
+  compact = false,
+  valueVariant = "default",
 }: {
   title: string;
   value: string;
   icon: ReactNode;
+  compact?: boolean;
+  valueVariant?: "default" | "text";
 }) {
   return (
     <Paper
       elevation={0}
       sx={{
-        p: 2,
-        minHeight: 118,
-        borderRadius: 4,
+        p: compact ? 1.5 : 2,
+        minHeight: compact ? 92 : 108,
+        borderRadius: "12px",
         border: "1px solid rgba(17, 97, 73, 0.10)",
         bgcolor: "rgba(255, 253, 247, 0.92)",
         backdropFilter: "blur(12px)",
       }}
     >
-      <Stack direction="row" spacing={1.5} alignItems="flex-start">
+      <Stack spacing={compact ? 1.1 : 1.5}>
         <Box
           sx={{
-            width: 46,
-            height: 46,
-            borderRadius: 3,
+            width: compact ? 34 : 38,
+            height: compact ? 34 : 38,
+            borderRadius: "10px",
             display: "grid",
             placeItems: "center",
             color: "primary.main",
@@ -93,13 +96,26 @@ function SummaryCard({
             color="text.secondary"
             sx={{
               display: "block",
-              lineHeight: 1.1,
+              lineHeight: 1.15,
               letterSpacing: "0.08em",
+              mb: compact ? 0.5 : 0.75,
+              fontSize: compact ? "0.62rem" : undefined,
             }}
           >
             {title}
           </Typography>
-          <Typography variant="h4" fontWeight={800} sx={{ lineHeight: 1.1, mt: 1 }}>
+          <Typography
+            variant={valueVariant === "text" ? "h6" : "h4"}
+            fontWeight={valueVariant === "text" ? 700 : 800}
+            sx={{
+              lineHeight: valueVariant === "text" ? 1.15 : 1.05,
+              fontSize: valueVariant === "text"
+                ? { xs: "1rem", sm: compact ? "1.1rem" : "1.2rem" }
+                : undefined,
+              wordBreak: "break-word",
+              overflowWrap: "anywhere",
+            }}
+          >
             {value}
           </Typography>
         </Box>
@@ -110,28 +126,78 @@ function SummaryCard({
 
 function LiveStateChip({ state }: { state: LiveConnectionState }) {
   const { t } = useI18n();
+  const config = state === "connected"
+    ? {
+        label: t("monitoring.live.connected"),
+        color: "#116149",
+        background: "rgba(17, 97, 73, 0.10)",
+      }
+    : state === "connecting"
+      ? {
+          label: t("monitoring.live.connecting"),
+          color: "#d97706",
+          background: "rgba(217, 119, 6, 0.10)",
+        }
+      : {
+          label: t("monitoring.live.disconnected"),
+          color: "#475569",
+          background: "rgba(100, 116, 139, 0.10)",
+        };
 
-  if (state === "connected") {
-    return <Chip color="success" icon={<SensorsRoundedIcon />} label={t("monitoring.live.connected")} />;
-  }
-
-  if (state === "connecting") {
-    return <Chip color="warning" icon={<SensorsRoundedIcon />} label={t("monitoring.live.connecting")} />;
-  }
-
-  return <Chip color="default" icon={<SensorsRoundedIcon />} label={t("monitoring.live.disconnected")} />;
+  return (
+    <Box
+      sx={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 1,
+        px: 1.5,
+        py: 1,
+        borderRadius: "8px",
+        border: "1px solid rgba(17, 97, 73, 0.10)",
+        bgcolor: config.background,
+        color: config.color,
+        fontWeight: 700,
+      }}
+    >
+      <SensorsRoundedIcon fontSize="small" />
+      <Typography variant="body2" sx={{ color: "inherit", fontWeight: 700 }}>
+        {config.label}
+      </Typography>
+    </Box>
+  );
 }
 
 function SpotStatusChip({ occupied }: { occupied: boolean }) {
   const { t } = useI18n();
+  const config = occupied
+    ? {
+        label: t("monitoring.status.occupied"),
+        color: "#b45309",
+        background: "rgba(217, 119, 6, 0.12)",
+      }
+    : {
+        label: t("monitoring.status.free"),
+        color: "#116149",
+        background: "rgba(17, 97, 73, 0.12)",
+      };
 
   return (
-    <Chip
-      size="small"
-      color={occupied ? "warning" : "success"}
-      label={occupied ? t("monitoring.status.occupied") : t("monitoring.status.free")}
-      sx={{ minWidth: 88 }}
-    />
+    <Box
+      sx={{
+        minWidth: 88,
+        px: 1.5,
+        py: 0.75,
+        borderRadius: "8px",
+        textAlign: "center",
+        fontSize: 14,
+        fontWeight: 700,
+        lineHeight: 1,
+        color: config.color,
+        bgcolor: config.background,
+      }}
+    >
+      {config.label}
+    </Box>
   );
 }
 
@@ -645,7 +711,7 @@ export function MonitoringPage() {
               sx={{
                 px: 2,
                 py: 1.35,
-                borderRadius: 4,
+                borderRadius: "10px",
                 display: "flex",
                 alignItems: "center",
                 gap: 1,
@@ -660,7 +726,7 @@ export function MonitoringPage() {
               </Typography>
             </Paper>
 
-            <Paper className="map-card" sx={{ borderRadius: 6, border: "1px solid rgba(17, 97, 73, 0.12)" }}>
+            <Paper className="map-card" sx={{ borderRadius: "12px", border: "1px solid rgba(17, 97, 73, 0.12)" }}>
               {loadingOverview && !overview ? (
                 <Stack justifyContent="center" alignItems="center" sx={{ minHeight: "100%" }} spacing={2}>
                   <CircularProgress size={32} />
@@ -698,14 +764,7 @@ export function MonitoringPage() {
                           fillColor: "#38bdf8",
                           fillOpacity: 0.9,
                         }}
-                      >
-                        <Tooltip direction="top" opacity={1} className="map-tooltip">
-                          <div>
-                            <h4>{t("monitoring.map.youAreHere")}</h4>
-                            <p>{t("monitoring.map.youAreHereDescription")}</p>
-                          </div>
-                        </Tooltip>
-                      </CircleMarker>
+                      />
                     ) : null}
 
                     {overview.lots.map((lot) => {
@@ -727,19 +786,7 @@ export function MonitoringPage() {
                             fillColor: color,
                             fillOpacity: selected ? 0.32 : 0.22,
                           }}
-                        >
-                          <Tooltip direction="top" opacity={1} className="map-tooltip" permanent={selected}>
-                            <div>
-                              <h4>{lot.name}</h4>
-                              <p>
-                                {t("admin.lotAvailability", {
-                                  free: formatWholeNumber(lot.freeSpots),
-                                  total: formatWholeNumber(lot.totalSpots),
-                                })}
-                              </p>
-                            </div>
-                          </Tooltip>
-                        </CircleMarker>
+                        />
                       );
                     })}
                   </MapContainer>
@@ -751,7 +798,7 @@ export function MonitoringPage() {
                         sx={{
                           px: 3,
                           py: 2.5,
-                          borderRadius: 4,
+                          borderRadius: "10px",
                           maxWidth: 440,
                           textAlign: "center",
                           bgcolor: "rgba(255,253,247,0.94)",
@@ -784,7 +831,7 @@ export function MonitoringPage() {
           <Paper
             sx={{
               p: 2.5,
-              borderRadius: 6,
+              borderRadius: "12px",
               border: "1px solid rgba(17, 97, 73, 0.12)",
               bgcolor: "rgba(255, 253, 247, 0.92)",
               minHeight: 560,
@@ -810,17 +857,34 @@ export function MonitoringPage() {
                 <Box
                   sx={{
                     display: "grid",
-                    gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(4, minmax(0, 1fr))" },
+                    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
                     gap: 1.25,
                   }}
                 >
-                  <SummaryCard title={t("common.totalSpots")} value={formatWholeNumber(selectedLot.totalSpots)} icon={<LocalParkingRoundedIcon />} />
-                  <SummaryCard title={t("common.freeSpots")} value={formatWholeNumber(selectedLot.freeSpots)} icon={<PlaceRoundedIcon />} />
-                  <SummaryCard title={t("common.occupiedSpots")} value={formatWholeNumber(selectedLot.occupiedSpots)} icon={<TrafficRoundedIcon />} />
                   <SummaryCard
+                    compact
+                    title={t("common.totalSpots")}
+                    value={formatWholeNumber(selectedLot.totalSpots)}
+                    icon={<LocalParkingRoundedIcon />}
+                  />
+                  <SummaryCard
+                    compact
+                    title={t("common.freeSpots")}
+                    value={formatWholeNumber(selectedLot.freeSpots)}
+                    icon={<PlaceRoundedIcon />}
+                  />
+                  <SummaryCard
+                    compact
+                    title={t("common.occupiedSpots")}
+                    value={formatWholeNumber(selectedLot.occupiedSpots)}
+                    icon={<TrafficRoundedIcon />}
+                  />
+                  <SummaryCard
+                    compact
                     title={t("common.lastUpdate")}
                     value={formatUpdateLabel(selectedLot.lastUpdatedAtUtc, locale, t)}
                     icon={<SensorsRoundedIcon />}
+                    valueVariant="text"
                   />
                 </Box>
 
@@ -844,7 +908,7 @@ export function MonitoringPage() {
                             onClick={() => setSelectedSpotId(spot.id)}
                             sx={{
                               p: 1.5,
-                              borderRadius: 3,
+                              borderRadius: "10px",
                               border: "1px solid",
                               borderColor: selected ? "primary.main" : "divider",
                               bgcolor: selected ? "rgba(17,97,73,0.08)" : "rgba(255,255,255,0.72)",
@@ -918,7 +982,7 @@ export function MonitoringPage() {
                           elevation={0}
                           sx={{
                             p: 1.25,
-                            borderRadius: 3,
+                            borderRadius: "10px",
                             border: "1px solid",
                             borderColor: "divider",
                             bgcolor: "rgba(255,255,255,0.72)",

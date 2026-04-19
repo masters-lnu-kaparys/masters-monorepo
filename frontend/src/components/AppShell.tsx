@@ -1,8 +1,7 @@
-import AdminPanelSettingsRoundedIcon from "@mui/icons-material/AdminPanelSettingsRounded";
 import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
-import MapRoundedIcon from "@mui/icons-material/MapRounded";
-import { AppBar, Box, Button, Chip, Container, Stack, Toolbar, Typography } from "@mui/material";
+import { AppBar, Box, Button, Container, Stack, Toolbar, Typography } from "@mui/material";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
+import { APP_ROUTES } from "../app/routes";
 import { useI18n } from "../i18n/LanguageProvider";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
@@ -56,28 +55,52 @@ export function AppShell({ isAdmin, userName, onLogout }: AppShellProps) {
                 </Typography>
 
                 <Stack direction="row" spacing={1} flexWrap="wrap">
-                  <NavButton to="/" label={t("common.map")} active={location.pathname === "/"} />
+                  <NavButton
+                    to={APP_ROUTES.home}
+                    label={t("common.map")}
+                    active={location.pathname === APP_ROUTES.home}
+                  />
                   {isAdmin ? (
                     <NavButton
-                      to="/admin"
+                      to={APP_ROUTES.admin}
                       label={t("common.adminPanel")}
-                      active={location.pathname.startsWith("/admin")}
+                      active={location.pathname.startsWith(APP_ROUTES.admin)}
                     />
                   ) : null}
                 </Stack>
               </Stack>
 
-              <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ xs: "stretch", sm: "center" }}>
-                <LanguageSwitcher />
-                <Chip
-                  color={isAdmin ? "secondary" : "primary"}
-                  icon={isAdmin ? <AdminPanelSettingsRoundedIcon /> : <MapRoundedIcon />}
-                  label={isAdmin ? t("common.role.admin") : t("common.role.user")}
-                />
-                <Typography color="text.secondary" sx={{ maxWidth: 220 }} noWrap>
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                alignItems={{ xs: "stretch", sm: "center" }}
+              >
+                <LanguageSwitcher compact />
+
+                <Typography
+                  variant="body2"
+                  color="text.secondary"
+                  sx={{ maxWidth: 220, fontWeight: 600, px: { xs: 0.25, sm: 0.5 } }}
+                  noWrap
+                >
                   {userName}
                 </Typography>
-                <Button variant="outlined" startIcon={<LogoutRoundedIcon />} onClick={onLogout}>
+
+                <Button
+                  variant="text"
+                  startIcon={<LogoutRoundedIcon />}
+                  onClick={onLogout}
+                  sx={{
+                    px: 1.2,
+                    py: 0.8,
+                    borderRadius: "999px",
+                    color: "primary.main",
+                    fontWeight: 700,
+                    "&:hover": {
+                      bgcolor: "rgba(17, 97, 73, 0.08)",
+                    },
+                  }}
+                >
                   {t("common.signOut")}
                 </Button>
               </Stack>
