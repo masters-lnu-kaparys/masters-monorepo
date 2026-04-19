@@ -1,6 +1,7 @@
 import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
-import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
+import { Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { APP_ROUTES } from "../app/routes";
 import { useI18n } from "../i18n/LanguageProvider";
 
 export function ForbiddenPage() {
@@ -21,24 +22,46 @@ export function ForbiddenPage() {
         sx={{
           width: "min(100%, 560px)",
           p: { xs: 3, md: 4 },
-          borderRadius: 6,
+          borderRadius: "12px",
           border: "1px solid rgba(17, 97, 73, 0.10)",
           bgcolor: "rgba(255, 253, 247, 0.96)",
-          textAlign: "center",
         }}
       >
-        <Stack spacing={2.25} alignItems="center">
-          <BlockRoundedIcon sx={{ fontSize: 52, color: "error.main" }} />
+        <Stack spacing={2.5}>
+          <Box
+            sx={{
+              width: 52,
+              height: 52,
+              display: "grid",
+              placeItems: "center",
+              borderRadius: "10px",
+              bgcolor: "rgba(211, 47, 47, 0.08)",
+              color: "error.main",
+            }}
+          >
+            <BlockRoundedIcon sx={{ fontSize: 30 }} />
+          </Box>
           <Typography variant="h4">{t("auth.forbidden.title")}</Typography>
           <Typography color="text.secondary">
             {t("auth.forbidden.description")}
           </Typography>
-          <Alert severity="warning" sx={{ width: "100%", textAlign: "left" }}>
-            {t("auth.forbidden.alert")}
-          </Alert>
-          <Button component={RouterLink} to="/" variant="contained">
-            {t("auth.forbidden.backToMap")}
-          </Button>
+
+          <Box
+            sx={{
+              p: 2,
+              borderRadius: "10px",
+              border: "1px solid rgba(217, 119, 6, 0.18)",
+              bgcolor: "rgba(217, 119, 6, 0.08)",
+            }}
+          >
+            <Typography color="text.secondary">{t("auth.forbidden.alert")}</Typography>
+          </Box>
+
+          <Box>
+            <Button component={RouterLink} to={APP_ROUTES.home} variant="contained">
+              {t("auth.forbidden.backToMap")}
+            </Button>
+          </Box>
         </Stack>
       </Paper>
     </Box>
