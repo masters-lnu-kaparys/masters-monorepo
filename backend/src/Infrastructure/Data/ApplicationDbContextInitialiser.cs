@@ -23,6 +23,10 @@ public static class InitialiserExtensions
 
 public class ApplicationDbContextInitialiser
 {
+    private const string InitialParkingMonitoringMigrationId = "20260302204719_AddParkingMonitoringSchema";
+    private const string ParkingLotsMigrationId = "20260405112416_AddParkingLotsAndSpotSources";
+    private const string EfCoreProductVersion = "9.0.0";
+
     private readonly ILogger<ApplicationDbContextInitialiser> _logger;
     private readonly ApplicationDbContext _context;
     private readonly DemoTopologyOptions _demoTopologyOptions;
@@ -49,6 +53,7 @@ public class ApplicationDbContextInitialiser
                 return;
             }
 
+            await EnsureMigrationHistoryForExistingSchemaAsync();
             await _context.Database.MigrateAsync();
             await SeedDemoTopologyAsync();
         }
@@ -97,18 +102,24 @@ public class ApplicationDbContextInitialiser
                 .Select(x => x.DeviceId)
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
 
-            var displayOrder = lot.Spots.Count + 1;
-
-            foreach (var realDeviceId in lotOptions.RealSpotDeviceIds.Where(realDeviceId => !existingDeviceIds.Contains(realDeviceId)))
+            for (var index = 0; index < lotOptions.RealSpotDeviceIds.Length; index++)
             {
+                var realDeviceId = lotOptions.RealSpotDeviceIds[index];
+
+                if (existingDeviceIds.Contains(realDeviceId))
+                {
+                    continue;
+                }
+
                 lot.Spots.Add(new ParkingSpot
                 {
                     DeviceId = realDeviceId,
-                    DisplayName = $"Місце {displayOrder:00}",
+                    DisplayName = ParkingSpotDisplayNameGenerator.Build(
+                        lotOptions.Key,
+                        SpotSourceKind.Real,
+                        index + 1),
                     SourceKind = SpotSourceKind.Real
                 });
-
-                displayOrder++;
             }
 
             for (var index = 1; index <= lotOptions.SimulatedSpotCount; index++)
@@ -123,40 +134,240 @@ public class ApplicationDbContextInitialiser
                 lot.Spots.Add(new ParkingSpot
                 {
                     DeviceId = simulatedDeviceId,
-                    DisplayName = $"Місце {displayOrder:00}",
+                    DisplayName = ParkingSpotDisplayNameGenerator.Build(
+                        lotOptions.Key,
+                        SpotSourceKind.Simulated,
+                        index),
                     SourceKind = SpotSourceKind.Simulated
                 });
-
-                displayOrder++;
             }
         }
 
         await _context.SaveChangesAsync();
     }
 
+    private async Task EnsureMigrationHistoryForExistingSchemaAsync()
+    {
+        var hasParkingSpotsTable = await TableExistsAsync("ParkingSpots");
+
+        if (!hasParkingSpotsTable)
+        {
+            return;
+        }
+
+        var appliedMigrations = await GetAppliedMigrationIdsAsync();
+
+        if (appliedMigrations.Count > 0)
+        {
+            return;
+        }
+
+        await EnsureMigrationHistoryTableExistsAsync();
+
+        if (await HasInitialParkingMonitoringSchemaAsync())
+        {
+            await InsertMigrationHistoryRecordAsync(InitialParkingMonitoringMigrationId);
+            _logger.LogInformation(
+                "Marked migration {MigrationId} as applied for an existing parking schema.",
+                InitialParkingMonitoringMigrationId);
+        }
+
+        if (await HasParkingLotsSchemaAsync())
+        {
+            await InsertMigrationHistoryRecordAsync(ParkingLotsMigrationId);
+            _logger.LogInformation(
+                "Marked migration {MigrationId} as applied for an existing parking lot schema.",
+                ParkingLotsMigrationId);
+        }
+    }
+
+    private async Task<bool> HasInitialParkingMonitoringSchemaAsync()
+    {
+        return await TableExistsAsync("ParkingSpots")
+            && await TableExistsAsync("ParkingTelemetry");
+    }
+
+    private async Task<bool> HasParkingLotsSchemaAsync()
+    {
+        return await TableExistsAsync("ParkingLots")
+            && await ColumnExistsAsync("ParkingSpots", "ParkingLotId")
+            && await ColumnExistsAsync("ParkingSpots", "SourceKind");
+    }
+
     private async Task<bool> TableExistsAsync(string tableName)
     {
-        await using var connection = _context.Database.GetDbConnection();
+        var result = await ExecuteScalarAsync(
+            """
+            SELECT COUNT(1)
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_NAME = @tableName
+            """,
+            ("@tableName", tableName));
+
+        return IsPositiveCount(result);
+    }
+
+    private async Task<bool> ColumnExistsAsync(string tableName, string columnName)
+    {
+        var result = await ExecuteScalarAsync(
+            """
+            SELECT COUNT(1)
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_NAME = @tableName
+              AND COLUMN_NAME = @columnName
+            """,
+            ("@tableName", tableName),
+            ("@columnName", columnName));
+
+        return IsPositiveCount(result);
+    }
+
+    private async Task<HashSet<string>> GetAppliedMigrationIdsAsync()
+    {
+        if (!await TableExistsAsync("__EFMigrationsHistory"))
+        {
+            return [];
+        }
+
+        var connection = _context.Database.GetDbConnection();
+        var shouldCloseConnection = false;
 
         if (connection.State != System.Data.ConnectionState.Open)
         {
             await connection.OpenAsync();
+            shouldCloseConnection = true;
         }
 
-        await using var command = connection.CreateCommand();
-        command.CommandText = """
-            SELECT COUNT(1)
-            FROM INFORMATION_SCHEMA.TABLES
-            WHERE TABLE_NAME = @tableName
-            """;
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT [MigrationId] FROM [__EFMigrationsHistory]";
 
-        var parameter = command.CreateParameter();
-        parameter.ParameterName = "@tableName";
-        parameter.Value = tableName;
-        command.Parameters.Add(parameter);
+            var results = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-        var result = await command.ExecuteScalarAsync();
+            await using var reader = await command.ExecuteReaderAsync();
 
+            while (await reader.ReadAsync())
+            {
+                results.Add(reader.GetString(0));
+            }
+
+            return results;
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private async Task EnsureMigrationHistoryTableExistsAsync()
+    {
+        await ExecuteNonQueryAsync(
+            """
+            IF OBJECT_ID(N'[__EFMigrationsHistory]') IS NULL
+            BEGIN
+                CREATE TABLE [__EFMigrationsHistory] (
+                    [MigrationId] nvarchar(150) NOT NULL,
+                    [ProductVersion] nvarchar(32) NOT NULL,
+                    CONSTRAINT [PK___EFMigrationsHistory] PRIMARY KEY ([MigrationId])
+                );
+            END
+            """);
+    }
+
+    private async Task InsertMigrationHistoryRecordAsync(string migrationId)
+    {
+        await ExecuteNonQueryAsync(
+            """
+            IF NOT EXISTS (
+                SELECT 1
+                FROM [__EFMigrationsHistory]
+                WHERE [MigrationId] = @migrationId
+            )
+            BEGIN
+                INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
+                VALUES (@migrationId, @productVersion);
+            END
+            """,
+            ("@migrationId", migrationId),
+            ("@productVersion", EfCoreProductVersion));
+    }
+
+    private async Task<object?> ExecuteScalarAsync(string commandText, params (string Name, object Value)[] parameters)
+    {
+        var connection = _context.Database.GetDbConnection();
+        var shouldCloseConnection = false;
+
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+            shouldCloseConnection = true;
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = commandText;
+
+            foreach (var (name, value) in parameters)
+            {
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = name;
+                parameter.Value = value;
+                command.Parameters.Add(parameter);
+            }
+
+            return await command.ExecuteScalarAsync();
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private async Task ExecuteNonQueryAsync(string commandText, params (string Name, object Value)[] parameters)
+    {
+        var connection = _context.Database.GetDbConnection();
+        var shouldCloseConnection = false;
+
+        if (connection.State != System.Data.ConnectionState.Open)
+        {
+            await connection.OpenAsync();
+            shouldCloseConnection = true;
+        }
+
+        try
+        {
+            await using var command = connection.CreateCommand();
+            command.CommandText = commandText;
+
+            foreach (var (name, value) in parameters)
+            {
+                var parameter = command.CreateParameter();
+                parameter.ParameterName = name;
+                parameter.Value = value;
+                command.Parameters.Add(parameter);
+            }
+
+            await command.ExecuteNonQueryAsync();
+        }
+        finally
+        {
+            if (shouldCloseConnection)
+            {
+                await connection.CloseAsync();
+            }
+        }
+    }
+
+    private static bool IsPositiveCount(object? result)
+    {
         return result is int count && count > 0
             || result is long longCount && longCount > 0
             || result is decimal decimalCount && decimalCount > 0;

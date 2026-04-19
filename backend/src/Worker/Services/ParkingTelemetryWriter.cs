@@ -69,14 +69,17 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
             }
 
             var displayOrder = await _dbContext.ParkingSpots
-                .Where(x => x.ParkingLotId == lot.Id)
+                .Where(x => x.ParkingLotId == lot.Id && x.SourceKind == SpotSourceKind.Real)
                 .CountAsync(cancellationToken);
 
             spot = new ParkingSpot
             {
                 ParkingLotId = lot.Id,
                 DeviceId = message.DeviceId,
-                DisplayName = $"Місце {displayOrder + 1:00}",
+                DisplayName = ParkingSpotDisplayNameGenerator.Build(
+                    ResolveLotKey(lot),
+                    SpotSourceKind.Real,
+                    displayOrder + 1),
                 SourceKind = SpotSourceKind.Real
             };
 
@@ -154,6 +157,16 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return lot;
+    }
+
+    private string ResolveLotKey(ParkingLot lot)
+    {
+        var configuredLot = _demoTopologyOptions.Lots
+            .FirstOrDefault(x =>
+                x.City.Equals(lot.City, StringComparison.OrdinalIgnoreCase)
+                && x.Name.Equals(lot.Name, StringComparison.OrdinalIgnoreCase));
+
+        return configuredLot?.Key ?? $"lot{lot.Id}";
     }
 
     private static bool IsUniqueConstraintViolation(DbUpdateException ex)
