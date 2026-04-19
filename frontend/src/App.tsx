@@ -1,67 +1,66 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { configureApiClient, resetApiClient } from "./api/http";
-import { getEffectiveUserRoles } from "./auth/config";
+import { APP_ROUTES } from "./app/routes";
+import { AUTH_CALLBACK_PATH, getEffectiveUserRoles, hasAuthCallbackParams } from "./auth/config";
 import { AppShell } from "./components/AppShell";
-import { FullScreenStatus } from "./components/FullScreenStatus";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useI18n } from "./i18n/LanguageProvider";
 import { AdminPage } from "./pages/AdminPage";
+import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { ForbiddenPage } from "./pages/ForbiddenPage";
 import { LoginPage } from "./pages/LoginPage";
 import { MonitoringPage } from "./pages/MonitoringPage";
 import "./App.css";
 
 export default function App() {
-  const { getAccessTokenSilently, loginWithRedirect, logout, user } = useAuth0();
+  const { getAccessTokenSilently, logout, user } = useAuth0();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [clientReady, setClientReady] = useState(false);
 
   const roles = useMemo(() => getEffectiveUserRoles(user as Record<string, unknown> | undefined), [user]);
   const isAdmin = roles.includes("Admin");
   const userName = user?.name ?? user?.email ?? user?.nickname ?? t("app.userFallbackName");
 
   const handleUnauthorized = useCallback(() => {
-    void loginWithRedirect({
-      appState: {
+    if (window.location.pathname === APP_ROUTES.login || window.location.pathname === AUTH_CALLBACK_PATH) {
+      return;
+    }
+
+    if (hasAuthCallbackParams(window.location.search)) {
+      return;
+    }
+
+    navigate(APP_ROUTES.login, {
+      replace: true,
+      state: {
         returnTo: `${window.location.pathname}${window.location.search}${window.location.hash}`,
       },
     });
-  }, [loginWithRedirect]);
-
-  const handleForbidden = useCallback(() => {
-    navigate("/forbidden", { replace: true });
   }, [navigate]);
 
-  useEffect(() => {
+  const handleForbidden = useCallback(() => {
+    navigate(APP_ROUTES.forbidden, { replace: true });
+  }, [navigate]);
+
+  useLayoutEffect(() => {
     configureApiClient({
       getAccessToken: getAccessTokenSilently,
       onUnauthorized: handleUnauthorized,
       onForbidden: handleForbidden,
     });
-    setClientReady(true);
 
     return () => {
       resetApiClient();
     };
   }, [getAccessTokenSilently, handleForbidden, handleUnauthorized]);
 
-  if (!clientReady) {
-    return (
-      <FullScreenStatus
-        titleKey="app.loadingSecureConnection.title"
-        descriptionKey="app.loadingSecureConnection.description"
-        loading
-      />
-    );
-  }
-
   return (
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/forbidden" element={<ForbiddenPage />} />
+      <Route path={APP_ROUTES.login.slice(1)} element={<LoginPage />} />
+      <Route path={APP_ROUTES.forbidden.slice(1)} element={<ForbiddenPage />} />
+      <Route path={AUTH_CALLBACK_PATH.slice(1)} element={<AuthCallbackPage />} />
       <Route
         element={(
           <ProtectedRoute>
@@ -75,7 +74,7 @@ export default function App() {
       >
         <Route index element={<MonitoringPage />} />
         <Route
-          path="admin"
+          path={APP_ROUTES.admin.slice(1)}
           element={(
             <ProtectedRoute allowedRoles={["Admin"]}>
               <AdminPage />
@@ -83,7 +82,7 @@ export default function App() {
           )}
         />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<Navigate to={APP_ROUTES.home} replace />} />
     </Routes>
   );
 }

@@ -85,12 +85,7 @@ export async function requestAccessToken(): Promise<string> {
     throw new Error(t("api.notConfigured"));
   }
 
-  try {
-    return await accessTokenProvider();
-  } catch (error) {
-    unauthorizedHandler?.();
-    throw error;
-  }
+  return accessTokenProvider();
 }
 
 async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {

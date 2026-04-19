@@ -1,5 +1,8 @@
+import { APP_ROUTES } from "../app/routes";
+
 export const AUTH0_ROLE_CLAIM =
   import.meta.env.VITE_AUTH0_ROLE_CLAIM ?? "https://masters.api/roles";
+export const AUTH_CALLBACK_PATH = APP_ROUTES.authCallback;
 
 export type Auth0RuntimeConfig = {
   domain: string;
@@ -58,4 +61,9 @@ export function getEffectiveUserRoles(
   }
 
   return claims ? ["User"] : [];
+}
+
+export function hasAuthCallbackParams(search: string): boolean {
+  const params = new URLSearchParams(search);
+  return params.has("code") && params.has("state");
 }

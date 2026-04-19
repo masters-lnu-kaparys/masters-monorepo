@@ -1,8 +1,10 @@
 import { useAuth0 } from "@auth0/auth0-react";
 import type { ReactElement } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { getEffectiveUserRoles } from "../auth/config";
+import { APP_ROUTES } from "../app/routes";
+import { getEffectiveUserRoles, hasAuthCallbackParams } from "../auth/config";
 import { useI18n } from "../i18n/LanguageProvider";
+import { AuthCallbackPage } from "../pages/AuthCallbackPage";
 import { FullScreenStatus } from "./FullScreenStatus";
 
 type ProtectedRouteProps = {
@@ -11,9 +13,28 @@ type ProtectedRouteProps = {
 };
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading, user } = useAuth0();
+  const { error, isAuthenticated, isLoading, user } = useAuth0();
   const { t } = useI18n();
   const location = useLocation();
+  const waitingForAuthCallback = hasAuthCallbackParams(location.search);
+
+  if (error) {
+    return (
+      <FullScreenStatus
+        title={t("auth.callback.errorTitle")}
+        description={t("auth.callback.errorDescription")}
+        severity="error"
+        actionLabel={t("auth.callback.backToLogin")}
+        onAction={() => {
+          window.location.assign(APP_ROUTES.login);
+        }}
+      />
+    );
+  }
+
+  if (waitingForAuthCallback) {
+    return <AuthCallbackPage fallbackTo={location.pathname} />;
+  }
 
   if (isLoading) {
     return (
@@ -28,7 +49,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   if (!isAuthenticated) {
     return (
       <Navigate
-        to="/login"
+        to={APP_ROUTES.login}
         replace
         state={{
           returnTo: `${location.pathname}${location.search}${location.hash}`,
@@ -42,7 +63,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     const hasAccess = allowedRoles.some((role) => roles.includes(role));
 
     if (!hasAccess) {
-      return <Navigate to="/forbidden" replace />;
+      return <Navigate to={APP_ROUTES.forbidden} replace />;
     }
   }
 

@@ -1,11 +1,10 @@
 import { Auth0Provider } from "@auth0/auth0-react";
 import { BrowserRouter } from "react-router-dom";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
-import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "leaflet/dist/leaflet.css";
 import App from "./App";
-import { getAuth0RuntimeConfig } from "./auth/config";
+import { AUTH_CALLBACK_PATH, getAuth0RuntimeConfig } from "./auth/config";
 import { FullScreenStatus } from "./components/FullScreenStatus";
 import { LanguageProvider } from "./i18n/LanguageProvider";
 import "./index.css";
@@ -50,13 +49,13 @@ const theme = createTheme({
     },
   },
   shape: {
-    borderRadius: 18,
+    borderRadius: 6,
   },
   components: {
     MuiButton: {
       styleOverrides: {
         root: {
-          borderRadius: 999,
+          borderRadius: "8px",
           textTransform: "none",
           fontWeight: 700,
           boxShadow: "none",
@@ -73,8 +72,15 @@ const theme = createTheme({
     MuiChip: {
       styleOverrides: {
         root: {
-          borderRadius: 999,
+          borderRadius: "8px",
           fontWeight: 700,
+        },
+      },
+    },
+    MuiButtonGroup: {
+      styleOverrides: {
+        grouped: {
+          borderRadius: "8px",
         },
       },
     },
@@ -84,43 +90,42 @@ const theme = createTheme({
 const auth0Config = getAuth0RuntimeConfig();
 
 const root = (
-  <StrictMode>
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LanguageProvider>
-        {auth0Config ? (
-          <Auth0Provider
-            domain={auth0Config.domain}
-            clientId={auth0Config.clientId}
-            cacheLocation="localstorage"
-            useRefreshTokens
-            authorizationParams={{
-              redirect_uri: window.location.origin,
-              audience: auth0Config.audience,
-              scope: "openid profile email",
-            }}
-            onRedirectCallback={(appState) => {
-              const nextPath = typeof appState?.returnTo === "string"
-                ? appState.returnTo
-                : window.location.pathname;
+  <ThemeProvider theme={theme}>
+    <CssBaseline />
+    <LanguageProvider>
+      {auth0Config ? (
+        <Auth0Provider
+          domain={auth0Config.domain}
+          clientId={auth0Config.clientId}
+          cacheLocation="localstorage"
+          useRefreshTokens
+          useRefreshTokensFallback
+          authorizationParams={{
+            redirect_uri: `${window.location.origin}${AUTH_CALLBACK_PATH}`,
+            audience: auth0Config.audience,
+            scope: "openid profile email offline_access",
+          }}
+          onRedirectCallback={(appState) => {
+            const nextPath = typeof appState?.returnTo === "string"
+              ? appState.returnTo
+              : "/";
 
-              window.history.replaceState({}, document.title, nextPath);
-            }}
-          >
-            <BrowserRouter>
-              <App />
-            </BrowserRouter>
-          </Auth0Provider>
-        ) : (
-          <FullScreenStatus
-            titleKey="app.auth0Missing.title"
-            descriptionKey="app.auth0Missing.description"
-            severity="warning"
-          />
-        )}
-      </LanguageProvider>
-    </ThemeProvider>
-  </StrictMode>
+            window.history.replaceState({}, document.title, nextPath);
+          }}
+        >
+          <BrowserRouter>
+            <App />
+          </BrowserRouter>
+        </Auth0Provider>
+      ) : (
+        <FullScreenStatus
+          titleKey="app.auth0Missing.title"
+          descriptionKey="app.auth0Missing.description"
+          severity="warning"
+        />
+      )}
+    </LanguageProvider>
+  </ThemeProvider>
 );
 
 createRoot(document.getElementById("root")!).render(root);
