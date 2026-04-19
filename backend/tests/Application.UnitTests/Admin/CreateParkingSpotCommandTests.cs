@@ -1,5 +1,6 @@
 using Masters.Api.Application.Admin.Commands.CreateParkingSpot;
 using Masters.Api.Application.Common.Exceptions;
+using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Domain.Entities;
 using Masters.Api.Domain.Enums;
 using Masters.Api.Infrastructure.Data;
@@ -9,12 +10,14 @@ namespace Masters.Api.Application.UnitTests.Admin;
 
 public class CreateParkingSpotCommandTests
 {
+    private static readonly IApplicationText Text = new TestApplicationText();
+
     [Test]
     public async Task ShouldGenerateDeviceIdForSimulatedSpotWhenMissing()
     {
         await using var dbContext = CreateDbContext();
         var lot = await SeedLotAsync(dbContext);
-        var handler = new CreateParkingSpotCommandHandler(dbContext);
+        var handler = new CreateParkingSpotCommandHandler(dbContext, Text);
 
         var spotId = await handler.Handle(
             new CreateParkingSpotCommand(lot.Id, "Місце 01", SpotSourceKind.Simulated, null),
@@ -42,7 +45,7 @@ public class CreateParkingSpotCommandTests
 
         await dbContext.SaveChangesAsync();
 
-        var handler = new CreateParkingSpotCommandHandler(dbContext);
+        var handler = new CreateParkingSpotCommandHandler(dbContext, Text);
 
         var exception = await Should.ThrowAsync<ValidationException>(async () =>
             await handler.Handle(
@@ -75,5 +78,12 @@ public class CreateParkingSpotCommandTests
             .Options;
 
         return new ApplicationDbContext(options);
+    }
+
+    private sealed class TestApplicationText : IApplicationText
+    {
+        public string this[string key] => key;
+
+        public string Format(string key, params object?[] args) => string.Format(key, args);
     }
 }

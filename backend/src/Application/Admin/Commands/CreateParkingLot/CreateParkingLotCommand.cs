@@ -1,3 +1,4 @@
+using Masters.Api.Application.Common.Exceptions;
 using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Application.Common.Security;
 using Masters.Api.Domain.Entities;
@@ -14,25 +15,33 @@ public sealed record CreateParkingLotCommand(
 
 public sealed class CreateParkingLotCommandValidator : AbstractValidator<CreateParkingLotCommand>
 {
-    public CreateParkingLotCommandValidator()
+    public CreateParkingLotCommandValidator(IApplicationText text)
     {
         RuleFor(x => x.Name)
             .NotEmpty()
-            .MaximumLength(128);
+            .WithMessage(text["validation.lot.name.required"])
+            .MaximumLength(128)
+            .WithMessage(text["validation.lot.name.max"]);
 
         RuleFor(x => x.City)
             .NotEmpty()
-            .MaximumLength(128);
+            .WithMessage(text["validation.lot.city.required"])
+            .MaximumLength(128)
+            .WithMessage(text["validation.lot.city.max"]);
 
         RuleFor(x => x.Address)
             .NotEmpty()
-            .MaximumLength(256);
+            .WithMessage(text["validation.lot.address.required"])
+            .MaximumLength(256)
+            .WithMessage(text["validation.lot.address.max"]);
 
         RuleFor(x => x.Latitude)
-            .InclusiveBetween(-90d, 90d);
+            .InclusiveBetween(-90d, 90d)
+            .WithMessage(text["validation.lot.latitude.range"]);
 
         RuleFor(x => x.Longitude)
-            .InclusiveBetween(-180d, 180d);
+            .InclusiveBetween(-180d, 180d)
+            .WithMessage(text["validation.lot.longitude.range"]);
     }
 }
 

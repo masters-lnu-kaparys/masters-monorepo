@@ -1,6 +1,8 @@
 using FluentValidation.Results;
+using Masters.Api.Application.Common.Exceptions;
 using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Domain.Enums;
+using AppValidationException = Masters.Api.Application.Common.Exceptions.ValidationException;
 
 namespace Masters.Api.Application.Admin.Common;
 
@@ -14,21 +16,22 @@ internal static class ParkingSpotDeviceIdGenerator
         long? currentSpotId,
         string? currentDeviceId,
         SpotSourceKind? currentSourceKind,
+        IApplicationText text,
         CancellationToken cancellationToken)
     {
         var normalizedDeviceId = requestedDeviceId?.Trim();
 
         if (!string.IsNullOrWhiteSpace(normalizedDeviceId))
         {
-            await EnsureUniqueAsync(dbContext, normalizedDeviceId, currentSpotId, cancellationToken);
+            await EnsureUniqueAsync(dbContext, normalizedDeviceId, currentSpotId, text, cancellationToken);
             return normalizedDeviceId;
         }
 
         if (sourceKind == SpotSourceKind.Real)
         {
-            throw new Masters.Api.Application.Common.Exceptions.ValidationException(
+            throw new AppValidationException(
             [
-                new ValidationFailure(nameof(requestedDeviceId), "Device ID is required for real parking spots.")
+                new ValidationFailure(nameof(requestedDeviceId), text["validation.spot.deviceId.requiredForReal"])
             ]);
         }
 
@@ -39,13 +42,14 @@ internal static class ParkingSpotDeviceIdGenerator
             return currentDeviceId;
         }
 
-        return await GenerateSimulatedDeviceIdAsync(dbContext, lotId, currentSpotId, cancellationToken);
+        return await GenerateSimulatedDeviceIdAsync(dbContext, lotId, currentSpotId, text, cancellationToken);
     }
 
     private static async Task<string> GenerateSimulatedDeviceIdAsync(
         IApplicationDbContext dbContext,
         long lotId,
         long? currentSpotId,
+        IApplicationText text,
         CancellationToken cancellationToken)
     {
         for (var index = 1; index <= 10_000; index++)
@@ -61,9 +65,9 @@ internal static class ParkingSpotDeviceIdGenerator
             }
         }
 
-        throw new Masters.Api.Application.Common.Exceptions.ValidationException(
+        throw new AppValidationException(
         [
-            new ValidationFailure("DeviceId", "Unable to generate a unique device ID for the simulated parking spot.")
+            new ValidationFailure("DeviceId", text["validation.spot.deviceId.generateFailed"])
         ]);
     }
 
@@ -71,6 +75,7 @@ internal static class ParkingSpotDeviceIdGenerator
         IApplicationDbContext dbContext,
         string deviceId,
         long? currentSpotId,
+        IApplicationText text,
         CancellationToken cancellationToken)
     {
         var duplicateExists = await dbContext.ParkingSpots.AnyAsync(
@@ -79,9 +84,9 @@ internal static class ParkingSpotDeviceIdGenerator
 
         if (duplicateExists)
         {
-            throw new Masters.Api.Application.Common.Exceptions.ValidationException(
+            throw new AppValidationException(
             [
-                new ValidationFailure("DeviceId", "A parking spot with the same device ID already exists.")
+                new ValidationFailure("DeviceId", text["validation.spot.deviceId.duplicate"])
             ]);
         }
     }

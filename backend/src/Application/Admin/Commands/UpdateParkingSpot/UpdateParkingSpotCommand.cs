@@ -3,6 +3,7 @@ using Masters.Api.Application.Common.Exceptions;
 using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Application.Common.Security;
 using Masters.Api.Domain.Enums;
+using AppNotFoundException = Masters.Api.Application.Common.Exceptions.NotFoundException;
 
 namespace Masters.Api.Application.Admin.Commands.UpdateParkingSpot;
 
@@ -15,36 +16,43 @@ public sealed record UpdateParkingSpotCommand(
 
 public sealed class UpdateParkingSpotCommandValidator : AbstractValidator<UpdateParkingSpotCommand>
 {
-    public UpdateParkingSpotCommandValidator()
+    public UpdateParkingSpotCommandValidator(IApplicationText text)
     {
         RuleFor(x => x.SpotId)
-            .GreaterThan(0);
+            .GreaterThan(0)
+            .WithMessage(text["validation.spotId.required"]);
 
         RuleFor(x => x.DisplayName)
             .NotEmpty()
-            .MaximumLength(128);
+            .WithMessage(text["validation.spot.displayName.required"])
+            .MaximumLength(128)
+            .WithMessage(text["validation.spot.displayName.max"]);
 
         RuleFor(x => x.SourceKind)
-            .IsInEnum();
+            .IsInEnum()
+            .WithMessage(text["validation.spot.sourceKind.invalid"]);
 
         RuleFor(x => x.DeviceId)
             .MaximumLength(128)
+            .WithMessage(text["validation.spot.deviceId.max"])
             .When(x => !string.IsNullOrWhiteSpace(x.DeviceId));
 
         RuleFor(x => x.DeviceId)
             .NotEmpty()
             .When(x => x.SourceKind == SpotSourceKind.Real)
-            .WithMessage("Device ID is required for real parking spots.");
+            .WithMessage(text["validation.spot.deviceId.requiredForReal"]);
     }
 }
 
 public sealed class UpdateParkingSpotCommandHandler : IRequestHandler<UpdateParkingSpotCommand>
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly IApplicationText _text;
 
-    public UpdateParkingSpotCommandHandler(IApplicationDbContext dbContext)
+    public UpdateParkingSpotCommandHandler(IApplicationDbContext dbContext, IApplicationText text)
     {
         _dbContext = dbContext;
+        _text = text;
     }
 
     public async Task Handle(UpdateParkingSpotCommand request, CancellationToken cancellationToken)
@@ -54,7 +62,7 @@ public sealed class UpdateParkingSpotCommandHandler : IRequestHandler<UpdatePark
 
         if (entity is null)
         {
-            throw new Masters.Api.Application.Common.Exceptions.NotFoundException($"Parking spot with id '{request.SpotId}' was not found.");
+            throw new AppNotFoundException(_text.Format("errors.parkingSpot.notFound", request.SpotId));
         }
 
         var previousSourceKind = entity.SourceKind;
@@ -70,6 +78,7 @@ public sealed class UpdateParkingSpotCommandHandler : IRequestHandler<UpdatePark
             currentSpotId: entity.Id,
             currentDeviceId: previousDeviceId,
             currentSourceKind: previousSourceKind,
+            _text,
             cancellationToken);
 
         await _dbContext.SaveChangesAsync(cancellationToken);

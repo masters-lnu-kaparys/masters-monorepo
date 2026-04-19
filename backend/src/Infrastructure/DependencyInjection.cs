@@ -1,6 +1,7 @@
-﻿using Masters.Api.Application.Common.Interfaces;
+using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Infrastructure.Data;
 using Masters.Api.Infrastructure.Data.Interceptors;
+using Masters.Api.Infrastructure.Localization;
 using Masters.Api.Infrastructure.Options;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
@@ -28,11 +29,9 @@ public static class DependencyInjection
             options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.PendingModelChangesWarning));
         });
 
-
         builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
-
+        builder.Services.AddSingleton<IApplicationText, ApplicationText>();
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
-
         builder.Services.AddSingleton(TimeProvider.System);
     }
 }

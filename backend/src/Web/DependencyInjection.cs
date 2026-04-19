@@ -4,10 +4,12 @@ using Masters.Api.Infrastructure.Data;
 using Masters.Api.Web.Options;
 using Masters.Api.Web.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using NSwag;
 using NSwag.Generation.Processors.Security;
+using System.Globalization;
 
 namespace Microsoft.Extensions.DependencyInjection;
 
@@ -18,6 +20,19 @@ public static class DependencyInjection
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
         builder.Services.Configure<Auth0Options>(builder.Configuration.GetSection(Auth0Options.SectionName));
+        builder.Services.Configure<RequestLocalizationOptions>(options =>
+        {
+            var supportedCultures = new[]
+            {
+                new CultureInfo("uk"),
+                new CultureInfo("en"),
+            };
+
+            options.DefaultRequestCulture = new RequestCulture("uk");
+            options.SupportedCultures = supportedCultures;
+            options.SupportedUICultures = supportedCultures;
+            options.ApplyCurrentCultureToResponseHeaders = true;
+        });
 
         var auth0Options = builder.Configuration
             .GetSection(Auth0Options.SectionName)

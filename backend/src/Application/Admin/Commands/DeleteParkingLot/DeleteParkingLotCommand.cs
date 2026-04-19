@@ -1,6 +1,7 @@
 using Masters.Api.Application.Common.Exceptions;
 using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Application.Common.Security;
+using AppNotFoundException = Masters.Api.Application.Common.Exceptions.NotFoundException;
 
 namespace Masters.Api.Application.Admin.Commands.DeleteParkingLot;
 
@@ -9,20 +10,23 @@ public sealed record DeleteParkingLotCommand(long LotId) : IRequest;
 
 public sealed class DeleteParkingLotCommandValidator : AbstractValidator<DeleteParkingLotCommand>
 {
-    public DeleteParkingLotCommandValidator()
+    public DeleteParkingLotCommandValidator(IApplicationText text)
     {
         RuleFor(x => x.LotId)
-            .GreaterThan(0);
+            .GreaterThan(0)
+            .WithMessage(text["validation.lotId.required"]);
     }
 }
 
 public sealed class DeleteParkingLotCommandHandler : IRequestHandler<DeleteParkingLotCommand>
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly IApplicationText _text;
 
-    public DeleteParkingLotCommandHandler(IApplicationDbContext dbContext)
+    public DeleteParkingLotCommandHandler(IApplicationDbContext dbContext, IApplicationText text)
     {
         _dbContext = dbContext;
+        _text = text;
     }
 
     public async Task Handle(DeleteParkingLotCommand request, CancellationToken cancellationToken)
@@ -32,7 +36,7 @@ public sealed class DeleteParkingLotCommandHandler : IRequestHandler<DeleteParki
 
         if (entity is null)
         {
-            throw new Masters.Api.Application.Common.Exceptions.NotFoundException($"Parking lot with id '{request.LotId}' was not found.");
+            throw new AppNotFoundException(_text.Format("errors.parkingLot.notFound", request.LotId));
         }
 
         _dbContext.ParkingLots.Remove(entity);

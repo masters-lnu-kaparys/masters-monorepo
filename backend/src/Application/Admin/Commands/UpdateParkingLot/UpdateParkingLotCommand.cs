@@ -1,6 +1,7 @@
 using Masters.Api.Application.Common.Exceptions;
 using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Application.Common.Security;
+using AppNotFoundException = Masters.Api.Application.Common.Exceptions.NotFoundException;
 
 namespace Masters.Api.Application.Admin.Commands.UpdateParkingLot;
 
@@ -15,38 +16,49 @@ public sealed record UpdateParkingLotCommand(
 
 public sealed class UpdateParkingLotCommandValidator : AbstractValidator<UpdateParkingLotCommand>
 {
-    public UpdateParkingLotCommandValidator()
+    public UpdateParkingLotCommandValidator(IApplicationText text)
     {
         RuleFor(x => x.LotId)
-            .GreaterThan(0);
+            .GreaterThan(0)
+            .WithMessage(text["validation.lotId.required"]);
 
         RuleFor(x => x.Name)
             .NotEmpty()
-            .MaximumLength(128);
+            .WithMessage(text["validation.lot.name.required"])
+            .MaximumLength(128)
+            .WithMessage(text["validation.lot.name.max"]);
 
         RuleFor(x => x.City)
             .NotEmpty()
-            .MaximumLength(128);
+            .WithMessage(text["validation.lot.city.required"])
+            .MaximumLength(128)
+            .WithMessage(text["validation.lot.city.max"]);
 
         RuleFor(x => x.Address)
             .NotEmpty()
-            .MaximumLength(256);
+            .WithMessage(text["validation.lot.address.required"])
+            .MaximumLength(256)
+            .WithMessage(text["validation.lot.address.max"]);
 
         RuleFor(x => x.Latitude)
-            .InclusiveBetween(-90d, 90d);
+            .InclusiveBetween(-90d, 90d)
+            .WithMessage(text["validation.lot.latitude.range"]);
 
         RuleFor(x => x.Longitude)
-            .InclusiveBetween(-180d, 180d);
+            .InclusiveBetween(-180d, 180d)
+            .WithMessage(text["validation.lot.longitude.range"]);
     }
 }
 
 public sealed class UpdateParkingLotCommandHandler : IRequestHandler<UpdateParkingLotCommand>
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly IApplicationText _text;
 
-    public UpdateParkingLotCommandHandler(IApplicationDbContext dbContext)
+    public UpdateParkingLotCommandHandler(IApplicationDbContext dbContext, IApplicationText text)
     {
         _dbContext = dbContext;
+        _text = text;
     }
 
     public async Task Handle(UpdateParkingLotCommand request, CancellationToken cancellationToken)
@@ -56,7 +68,7 @@ public sealed class UpdateParkingLotCommandHandler : IRequestHandler<UpdateParki
 
         if (entity is null)
         {
-            throw new Masters.Api.Application.Common.Exceptions.NotFoundException($"Parking lot with id '{request.LotId}' was not found.");
+            throw new AppNotFoundException(_text.Format("errors.parkingLot.notFound", request.LotId));
         }
 
         entity.Name = request.Name.Trim();
