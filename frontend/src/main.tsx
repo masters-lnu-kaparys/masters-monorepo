@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import App from "./App";
 import { getAuth0RuntimeConfig } from "./auth/config";
 import { FullScreenStatus } from "./components/FullScreenStatus";
+import { LanguageProvider } from "./i18n/LanguageProvider";
 import "./index.css";
 
 const theme = createTheme({
@@ -86,36 +87,38 @@ const root = (
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      {auth0Config ? (
-        <Auth0Provider
-          domain={auth0Config.domain}
-          clientId={auth0Config.clientId}
-          cacheLocation="localstorage"
-          useRefreshTokens
-          authorizationParams={{
-            redirect_uri: window.location.origin,
-            audience: auth0Config.audience,
-            scope: "openid profile email",
-          }}
-          onRedirectCallback={(appState) => {
-            const nextPath = typeof appState?.returnTo === "string"
-              ? appState.returnTo
-              : window.location.pathname;
+      <LanguageProvider>
+        {auth0Config ? (
+          <Auth0Provider
+            domain={auth0Config.domain}
+            clientId={auth0Config.clientId}
+            cacheLocation="localstorage"
+            useRefreshTokens
+            authorizationParams={{
+              redirect_uri: window.location.origin,
+              audience: auth0Config.audience,
+              scope: "openid profile email",
+            }}
+            onRedirectCallback={(appState) => {
+              const nextPath = typeof appState?.returnTo === "string"
+                ? appState.returnTo
+                : window.location.pathname;
 
-            window.history.replaceState({}, document.title, nextPath);
-          }}
-        >
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
-        </Auth0Provider>
-      ) : (
-        <FullScreenStatus
-          title="Потрібно налаштувати Auth0"
-          description="Додай VITE_AUTH0_DOMAIN, VITE_AUTH0_CLIENT_ID і VITE_AUTH0_AUDIENCE у frontend env, а також Auth0:Domain і Auth0:Audience у backend appsettings."
-          severity="warning"
-        />
-      )}
+              window.history.replaceState({}, document.title, nextPath);
+            }}
+          >
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+          </Auth0Provider>
+        ) : (
+          <FullScreenStatus
+            titleKey="app.auth0Missing.title"
+            descriptionKey="app.auth0Missing.description"
+            severity="warning"
+          />
+        )}
+      </LanguageProvider>
     </ThemeProvider>
   </StrictMode>
 );

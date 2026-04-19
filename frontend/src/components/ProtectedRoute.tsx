@@ -2,6 +2,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import type { ReactElement } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { getEffectiveUserRoles } from "../auth/config";
+import { useI18n } from "../i18n/LanguageProvider";
 import { FullScreenStatus } from "./FullScreenStatus";
 
 type ProtectedRouteProps = {
@@ -11,13 +12,14 @@ type ProtectedRouteProps = {
 
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth0();
+  const { t } = useI18n();
   const location = useLocation();
 
   if (isLoading) {
     return (
       <FullScreenStatus
-        title="Підключаємо ваш обліковий запис"
-        description="Застосунок перевіряє активну сесію і готує безпечний доступ до карти та адмінки."
+        title={t("route.loading.title")}
+        description={t("route.loading.description")}
         loading
       />
     );

@@ -1,8 +1,11 @@
 import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import { Alert, Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
+import { useI18n } from "../i18n/LanguageProvider";
 
 export function ForbiddenPage() {
+  const { t } = useI18n();
+
   return (
     <Box
       sx={{
@@ -26,15 +29,15 @@ export function ForbiddenPage() {
       >
         <Stack spacing={2.25} alignItems="center">
           <BlockRoundedIcon sx={{ fontSize: 52, color: "error.main" }} />
-          <Typography variant="h4">Недостатньо прав доступу</Typography>
+          <Typography variant="h4">{t("auth.forbidden.title")}</Typography>
           <Typography color="text.secondary">
-            Ви вже маєте базовий доступ до карти та моніторингу, але для цієї сторінки потрібна роль Admin.
+            {t("auth.forbidden.description")}
           </Typography>
           <Alert severity="warning" sx={{ width: "100%", textAlign: "left" }}>
-            Якщо доступ має бути, признач роль через Auth0 Dashboard і виконай повторний вхід, щоб отримати новий токен.
+            {t("auth.forbidden.alert")}
           </Alert>
           <Button component={RouterLink} to="/" variant="contained">
-            Повернутися до карти
+            {t("auth.forbidden.backToMap")}
           </Button>
         </Stack>
       </Paper>

@@ -1,9 +1,13 @@
 import { Alert, Box, Button, CircularProgress, Paper, Stack, Typography } from "@mui/material";
+import { useI18n } from "../i18n/LanguageProvider";
 
 type FullScreenStatusProps = {
-  title: string;
-  description: string;
+  title?: string;
+  description?: string;
+  titleKey?: string;
+  descriptionKey?: string;
   actionLabel?: string;
+  actionLabelKey?: string;
   onAction?: () => void;
   severity?: "info" | "warning" | "error" | "success";
   loading?: boolean;
@@ -12,11 +16,19 @@ type FullScreenStatusProps = {
 export function FullScreenStatus({
   title,
   description,
+  titleKey,
+  descriptionKey,
   actionLabel,
+  actionLabelKey,
   onAction,
   severity = "info",
   loading = false,
 }: FullScreenStatusProps) {
+  const { t } = useI18n();
+  const resolvedTitle = titleKey ? t(titleKey) : title ?? "";
+  const resolvedDescription = descriptionKey ? t(descriptionKey) : description ?? "";
+  const resolvedActionLabel = actionLabelKey ? t(actionLabelKey) : actionLabel;
+
   return (
     <Box
       sx={{
@@ -42,20 +54,20 @@ export function FullScreenStatus({
 
           <Box>
             <Typography variant="h4" sx={{ mb: 1 }}>
-              {title}
+              {resolvedTitle}
             </Typography>
-            <Typography color="text.secondary">{description}</Typography>
+            <Typography color="text.secondary">{resolvedDescription}</Typography>
           </Box>
 
           <Alert severity={severity} sx={{ width: "100%" }}>
             {severity === "error"
-              ? "Перевір конфігурацію або права доступу і спробуй ще раз."
-              : "Стан застосунку контролюється і не вимагає ручних обхідних дій."}
+              ? t("fullscreen.error")
+              : t("fullscreen.info")}
           </Alert>
 
-          {actionLabel && onAction ? (
+          {resolvedActionLabel && onAction ? (
             <Button variant="contained" onClick={onAction}>
-              {actionLabel}
+              {resolvedActionLabel}
             </Button>
           ) : null}
         </Stack>

@@ -6,6 +6,7 @@ import { getEffectiveUserRoles } from "./auth/config";
 import { AppShell } from "./components/AppShell";
 import { FullScreenStatus } from "./components/FullScreenStatus";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { useI18n } from "./i18n/LanguageProvider";
 import { AdminPage } from "./pages/AdminPage";
 import { ForbiddenPage } from "./pages/ForbiddenPage";
 import { LoginPage } from "./pages/LoginPage";
@@ -14,12 +15,13 @@ import "./App.css";
 
 export default function App() {
   const { getAccessTokenSilently, loginWithRedirect, logout, user } = useAuth0();
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [clientReady, setClientReady] = useState(false);
 
   const roles = useMemo(() => getEffectiveUserRoles(user as Record<string, unknown> | undefined), [user]);
   const isAdmin = roles.includes("Admin");
-  const userName = user?.name ?? user?.email ?? user?.nickname ?? "Користувач";
+  const userName = user?.name ?? user?.email ?? user?.nickname ?? t("app.userFallbackName");
 
   const handleUnauthorized = useCallback(() => {
     void loginWithRedirect({
@@ -49,8 +51,8 @@ export default function App() {
   if (!clientReady) {
     return (
       <FullScreenStatus
-        title="Готуємо захищене з'єднання"
-        description="Налаштовуємо авторизований доступ до API та realtime-оновлень."
+        titleKey="app.loadingSecureConnection.title"
+        descriptionKey="app.loadingSecureConnection.description"
         loading
       />
     );

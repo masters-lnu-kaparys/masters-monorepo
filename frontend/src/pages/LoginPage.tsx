@@ -16,6 +16,8 @@ import {
 } from "@mui/material";
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { LanguageSwitcher } from "../components/LanguageSwitcher";
+import { useI18n } from "../i18n/LanguageProvider";
 
 type DetailCardProps = {
   icon: ReactNode;
@@ -118,6 +120,7 @@ function AccessStep({ accent, icon, title, description }: AccessStepProps) {
 
 export function LoginPage() {
   const { isAuthenticated, isLoading, loginWithRedirect } = useAuth0();
+  const { t } = useI18n();
   const location = useLocation();
   const returnTo = typeof location.state?.returnTo === "string" ? location.state.returnTo : "/";
 
@@ -138,6 +141,10 @@ export function LoginPage() {
       }}
     >
       <Container maxWidth="xl">
+        <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
+          <LanguageSwitcher />
+        </Stack>
+
         <Box
           sx={{
             display: "grid",
@@ -158,8 +165,8 @@ export function LoginPage() {
           >
             <Stack spacing={4}>
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ xs: "flex-start", sm: "center" }}>
-                <Chip label="SMART PARKING PLATFORM" color="secondary" sx={{ letterSpacing: "0.12em" }} />
-                <Chip label="Auth0 Protected Access" variant="outlined" />
+                <Chip label={t("auth.login.badge.platform")} color="secondary" sx={{ letterSpacing: "0.12em" }} />
+                <Chip label={t("auth.login.badge.protected")} variant="outlined" />
               </Stack>
 
               <Box sx={{ maxWidth: 820 }}>
@@ -171,7 +178,7 @@ export function LoginPage() {
                     mb: 2,
                   }}
                 >
-                  Контроль паркування в реальному міському контексті
+                  {t("auth.login.heroTitle")}
                 </Typography>
                 <Typography
                   sx={{
@@ -180,10 +187,7 @@ export function LoginPage() {
                     color: "text.secondary",
                   }}
                 >
-                  Увійди, щоб бачити карту парковок, вільні місця та оновлення від IoT-сенсорів у
-                  реальному часі. Базовий доступ отримує кожен автентифікований користувач, а
-                  адмінські інструменти відкриваються тільки після призначення ролі Admin в Auth0
-                  Dashboard.
+                  {t("auth.login.heroDescription")}
                 </Typography>
               </Box>
 
@@ -198,7 +202,7 @@ export function LoginPage() {
                     })
                   }
                 >
-                  Увійти до системи
+                  {t("auth.login.signIn")}
                 </Button>
                 <Button
                   size="large"
@@ -210,7 +214,7 @@ export function LoginPage() {
                     })
                   }
                 >
-                  Створити обліковий запис
+                  {t("auth.login.signUp")}
                 </Button>
               </Stack>
 
@@ -225,18 +229,18 @@ export function LoginPage() {
               >
                 <DetailCard
                   icon={<LocalParkingRoundedIcon />}
-                  title="Карта парковок"
-                  description="Завантаженість місць і доступність парковок у межах міста на одній інтерактивній карті."
+                  title={t("auth.login.featureMap.title")}
+                  description={t("auth.login.featureMap.description")}
                 />
                 <DetailCard
                   icon={<BoltRoundedIcon />}
-                  title="Оновлення наживо"
-                  description="Система поєднує фізичний сенсор і симуляцію, щоб дати стабільну live-картину для демонстрації."
+                  title={t("auth.login.featureLive.title")}
+                  description={t("auth.login.featureLive.description")}
                 />
                 <DetailCard
                   icon={<SecurityRoundedIcon />}
-                  title="Ролі без плутанини"
-                  description="Кожен авторизований користувач має базовий доступ, а додаткові функції дає тільки роль Admin."
+                  title={t("auth.login.featureRoles.title")}
+                  description={t("auth.login.featureRoles.description")}
                 />
               </Box>
             </Stack>
@@ -259,29 +263,26 @@ export function LoginPage() {
                   variant="overline"
                   sx={{ color: "secondary.main", fontWeight: 800, letterSpacing: "0.18em" }}
                 >
-                  ACCESS MODEL
+                  {t("auth.login.access.overline")}
                 </Typography>
                 <Typography variant="h4" sx={{ mt: 0.75, mb: 1 }}>
-                  Як працює доступ
+                  {t("auth.login.access.title")}
                 </Typography>
-                <Typography color="text.secondary">
-                  Логіка проста: звичайний користувач одразу отримує доступ до карти, а адмінські
-                  можливості відкриваються лише тим, кому їх реально призначили.
-                </Typography>
+                <Typography color="text.secondary">{t("auth.login.access.description")}</Typography>
               </Box>
 
               <Stack spacing={1.5}>
                 <AccessStep
                   accent="#116149"
                   icon={<TuneRoundedIcon />}
-                  title="User за замовчуванням"
-                  description="Після успішного входу користувач одразу бачить карту, стан парковок і історію місць без додаткових ручних налаштувань."
+                  title={t("auth.login.access.user.title")}
+                  description={t("auth.login.access.user.description")}
                 />
                 <AccessStep
                   accent="#d97706"
                   icon={<SecurityRoundedIcon />}
-                  title="Admin лише через Auth0 Dashboard"
-                  description="Якщо користувачу призначають роль Admin в Auth0, у нього з'являється доступ до адмін-панелі та CRUD-операцій."
+                  title={t("auth.login.access.admin.title")}
+                  description={t("auth.login.access.admin.description")}
                 />
               </Stack>
 
@@ -294,13 +295,13 @@ export function LoginPage() {
                   bgcolor: "rgba(17, 97, 73, 0.04)",
                 }}
               >
-                <Typography sx={{ fontWeight: 800, mb: 0.75 }}>Що важливо знати</Typography>
+                <Typography sx={{ fontWeight: 800, mb: 0.75 }}>{t("auth.login.notes.title")}</Typography>
                 <Stack spacing={0.75}>
                   <Typography variant="body2" color="text.secondary">
-                    Якщо роль щойно змінили в Auth0, достатньо вийти й увійти повторно, щоб оновився токен.
+                    {t("auth.login.notes.refresh")}
                   </Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Базовий доступ не вимагає явного призначення ролі User для кожного нового акаунта.
+                    {t("auth.login.notes.defaultUser")}
                   </Typography>
                 </Stack>
               </Paper>

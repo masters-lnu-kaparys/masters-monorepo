@@ -33,6 +33,7 @@ import {
   updateAdminLot,
   updateAdminSpot,
 } from "../api/client";
+import { useI18n } from "../i18n/LanguageProvider";
 import type { AdminParkingLot, AdminParkingSpot, SpotSourceKind, UpsertParkingLotInput } from "../types/api";
 import { SPOT_SOURCE } from "../types/api";
 
@@ -51,40 +52,45 @@ type DeleteDialogState =
   | { type: "spot"; id: number; label: string }
   | null;
 
-const EMPTY_LOT_FORM: UpsertParkingLotInput = {
-  name: "",
-  city: "Львів",
-  address: "",
-  latitude: 49.8419,
-  longitude: 24.0315,
-};
-
 const EMPTY_SPOT_FORM = {
   displayName: "",
   sourceKind: SPOT_SOURCE.SIMULATED,
   deviceId: "",
 };
 
-function formatLastUpdate(utc: string | null) {
-  return utc ? new Date(utc).toLocaleString() : "ще немає даних";
+function formatLastUpdate(utc: string | null, locale: string, t: (key: string, params?: Record<string, string | number>) => string) {
+  if (!utc) {
+    return t("common.noDataYet");
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(utc));
 }
 
-function sourceLabel(sourceKind: SpotSourceKind) {
-  return sourceKind === SPOT_SOURCE.REAL ? "Real" : "Simulated";
+function sourceLabel(
+  sourceKind: SpotSourceKind,
+  t: (key: string, params?: Record<string, string | number>) => string,
+) {
+  return sourceKind === SPOT_SOURCE.REAL ? t("admin.source.real") : t("admin.source.simulated");
 }
 
 function SpotSourceChip({ sourceKind }: { sourceKind: SpotSourceKind }) {
+  const { t } = useI18n();
+
   return (
     <Chip
       size="small"
       color={sourceKind === SPOT_SOURCE.REAL ? "secondary" : "default"}
-      label={sourceLabel(sourceKind)}
+      label={sourceLabel(sourceKind, t)}
       variant={sourceKind === SPOT_SOURCE.REAL ? "filled" : "outlined"}
     />
   );
 }
 
 export function AdminPage() {
+  const { t, language, locale } = useI18n();
   const [lots, setLots] = useState<AdminParkingLot[]>([]);
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
@@ -94,6 +100,24 @@ export function AdminPage() {
   const [lotDialog, setLotDialog] = useState<LotDialogState>({ open: false });
   const [spotDialog, setSpotDialog] = useState<SpotDialogState>({ open: false });
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
+
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+    [locale],
+  );
+
+  const createEmptyLotForm = useCallback<() => UpsertParkingLotInput>(() => ({
+    name: "",
+    city: language === "uk" ? "Львів" : "Lviv",
+    address: "",
+    latitude: 49.8419,
+    longitude: 24.0315,
+  }), [language]);
+
+  const formatWholeNumber = useCallback(
+    (value: number) => numberFormatter.format(value),
+    [numberFormatter],
+  );
 
   const selectedLot = useMemo(
     () => lots.find((lot) => lot.id === selectedLotId) ?? null,
@@ -119,11 +143,11 @@ export function AdminPage() {
         return response[0].id;
       });
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Не вдалося завантажити список парковок.");
+      setError(loadError instanceof Error ? loadError.message : t("admin.loadError"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void loadLots();
@@ -139,12 +163,12 @@ export function AdminPage() {
     try {
       if (lotDialog.mode === "create") {
         const createdLotId = await createAdminLot(lotDialog.value);
-        setSuccessMessage("Парковку додано.");
+        setSuccessMessage(t("admin.success.lotAdded"));
         await loadLots();
         setSelectedLotId(createdLotId);
       } else {
         await updateAdminLot(lotDialog.lotId, lotDialog.value);
-        setSuccessMessage("Дані парковки оновлено.");
+        setSuccessMessage(t("admin.success.lotUpdated"));
         await loadLots();
         setSelectedLotId(lotDialog.lotId);
       }
@@ -152,11 +176,11 @@ export function AdminPage() {
       setLotDialog({ open: false });
       setError(null);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Не вдалося зберегти парковку.");
+      setError(saveError instanceof Error ? saveError.message : t("admin.saveLotError"));
     } finally {
       setSaving(false);
     }
-  }, [loadLots, lotDialog]);
+  }, [loadLots, lotDialog, t]);
 
   const handleSpotDialogSubmit = useCallback(async () => {
     if (!spotDialog.open) {
@@ -174,10 +198,10 @@ export function AdminPage() {
 
       if (spotDialog.mode === "create") {
         await createAdminSpot(spotDialog.lotId, payload);
-        setSuccessMessage("Місце додано.");
+        setSuccessMessage(t("admin.success.spotAdded"));
       } else {
         await updateAdminSpot(spotDialog.spotId, payload);
-        setSuccessMessage("Місце оновлено.");
+        setSuccessMessage(t("admin.success.spotUpdated"));
       }
 
       await loadLots();
@@ -185,11 +209,11 @@ export function AdminPage() {
       setSpotDialog({ open: false });
       setError(null);
     } catch (saveError) {
-      setError(saveError instanceof Error ? saveError.message : "Не вдалося зберегти місце.");
+      setError(saveError instanceof Error ? saveError.message : t("admin.saveSpotError"));
     } finally {
       setSaving(false);
     }
-  }, [loadLots, spotDialog]);
+  }, [loadLots, spotDialog, t]);
 
   const handleDelete = useCallback(async () => {
     if (!deleteDialog) {
@@ -201,27 +225,27 @@ export function AdminPage() {
     try {
       if (deleteDialog.type === "lot") {
         await deleteAdminLot(deleteDialog.id);
-        setSuccessMessage("Парковку видалено.");
+        setSuccessMessage(t("admin.success.lotDeleted"));
       } else {
         await deleteAdminSpot(deleteDialog.id);
-        setSuccessMessage("Місце видалено.");
+        setSuccessMessage(t("admin.success.spotDeleted"));
       }
 
       await loadLots();
       setDeleteDialog(null);
       setError(null);
     } catch (deleteError) {
-      setError(deleteError instanceof Error ? deleteError.message : "Не вдалося виконати видалення.");
+      setError(deleteError instanceof Error ? deleteError.message : t("admin.deleteError"));
     } finally {
       setSaving(false);
     }
-  }, [deleteDialog, loadLots]);
+  }, [deleteDialog, loadLots, t]);
 
   const openCreateLotDialog = () => {
     setLotDialog({
       mode: "create",
       open: true,
-      value: EMPTY_LOT_FORM,
+      value: createEmptyLotForm(),
     });
   };
 
@@ -274,18 +298,18 @@ export function AdminPage() {
         >
           <Box>
             <Typography variant="overline" sx={{ display: "block", color: "secondary.main", letterSpacing: "0.18em", fontWeight: 800 }}>
-              ADMIN PANEL
+              {t("admin.overline")}
             </Typography>
             <Typography variant="h3" sx={{ mb: 1 }}>
-              Керування парковками та місцями
+              {t("admin.title")}
             </Typography>
             <Typography color="text.secondary" sx={{ maxWidth: 760 }}>
-              Тут адміністратор створює міські парковки, підтримує їх координати на карті та прив&apos;язує реальні або симульовані місця.
+              {t("admin.description")}
             </Typography>
           </Box>
 
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreateLotDialog}>
-            Додати парковку
+            {t("admin.addLot")}
           </Button>
         </Stack>
 
@@ -301,7 +325,7 @@ export function AdminPage() {
         >
           <Paper sx={{ p: 2.5, borderRadius: 6, border: "1px solid rgba(17, 97, 73, 0.12)" }}>
             <Stack spacing={2}>
-              <Typography variant="h5">Парковки</Typography>
+              <Typography variant="h5">{t("admin.lotsTitle")}</Typography>
 
               {loading ? (
                 <Box sx={{ py: 4, textAlign: "center" }}>
@@ -333,7 +357,10 @@ export function AdminPage() {
                               {lot.address}, {lot.city}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              {lot.freeSpots} вільно з {lot.totalSpots} місць
+                              {t("admin.lotAvailability", {
+                                free: formatWholeNumber(lot.freeSpots),
+                                total: formatWholeNumber(lot.totalSpots),
+                              })}
                             </Typography>
                           </Box>
 
@@ -342,7 +369,7 @@ export function AdminPage() {
                               event.stopPropagation();
                               openEditLotDialog(lot);
                             }}>
-                              Змінити
+                              {t("common.edit")}
                             </Button>
                             <Button
                               size="small"
@@ -353,7 +380,7 @@ export function AdminPage() {
                                 setDeleteDialog({ type: "lot", id: lot.id, label: lot.name });
                               }}
                             >
-                              Видалити
+                              {t("common.delete")}
                             </Button>
                           </Stack>
                         </Stack>
@@ -362,7 +389,7 @@ export function AdminPage() {
                   })}
                 </Stack>
               ) : (
-                <Alert severity="info">Ще немає жодної парковки. Створи першу через кнопку зверху.</Alert>
+                <Alert severity="info">{t("admin.lotsEmpty")}</Alert>
               )}
             </Stack>
           </Paper>
@@ -373,7 +400,7 @@ export function AdminPage() {
                 <Stack direction={{ xs: "column", md: "row" }} justifyContent="space-between" spacing={2}>
                   <Box>
                     <Typography variant="overline" sx={{ display: "block", color: "secondary.main", fontWeight: 800, letterSpacing: "0.16em" }}>
-                      ОБРАНА ПАРКОВКА
+                      {t("admin.selectedLot.overline")}
                     </Typography>
                     <Typography variant="h4" sx={{ mt: 0.5 }}>
                       {selectedLot.name}
@@ -382,12 +409,15 @@ export function AdminPage() {
                       {selectedLot.address}, {selectedLot.city}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      Координати: {selectedLot.latitude.toFixed(5)}, {selectedLot.longitude.toFixed(5)}
+                      {t("common.coordinates", {
+                        latitude: selectedLot.latitude.toFixed(5),
+                        longitude: selectedLot.longitude.toFixed(5),
+                      })}
                     </Typography>
                   </Box>
 
                   <Button variant="outlined" startIcon={<AddRoundedIcon />} onClick={() => openCreateSpotDialog(selectedLot.id)}>
-                    Додати місце
+                    {t("admin.addSpot")}
                   </Button>
                 </Stack>
 
@@ -399,23 +429,23 @@ export function AdminPage() {
                   }}
                 >
                   <Paper elevation={0} sx={{ p: 2, borderRadius: 4, bgcolor: "rgba(255,255,255,0.68)", border: "1px solid rgba(17, 97, 73, 0.10)" }}>
-                    <Typography variant="overline" color="text.secondary">Місць</Typography>
-                    <Typography variant="h4" fontWeight={800}>{selectedLot.totalSpots}</Typography>
+                    <Typography variant="overline" color="text.secondary">{t("common.spots")}</Typography>
+                    <Typography variant="h4" fontWeight={800}>{formatWholeNumber(selectedLot.totalSpots)}</Typography>
                   </Paper>
                   <Paper elevation={0} sx={{ p: 2, borderRadius: 4, bgcolor: "rgba(255,255,255,0.68)", border: "1px solid rgba(17, 97, 73, 0.10)" }}>
-                    <Typography variant="overline" color="text.secondary">Вільно</Typography>
-                    <Typography variant="h4" fontWeight={800}>{selectedLot.freeSpots}</Typography>
+                    <Typography variant="overline" color="text.secondary">{t("common.freeSpots")}</Typography>
+                    <Typography variant="h4" fontWeight={800}>{formatWholeNumber(selectedLot.freeSpots)}</Typography>
                   </Paper>
                   <Paper elevation={0} sx={{ p: 2, borderRadius: 4, bgcolor: "rgba(255,255,255,0.68)", border: "1px solid rgba(17, 97, 73, 0.10)" }}>
-                    <Typography variant="overline" color="text.secondary">Зайнято</Typography>
-                    <Typography variant="h4" fontWeight={800}>{selectedLot.occupiedSpots}</Typography>
+                    <Typography variant="overline" color="text.secondary">{t("common.occupiedSpots")}</Typography>
+                    <Typography variant="h4" fontWeight={800}>{formatWholeNumber(selectedLot.occupiedSpots)}</Typography>
                   </Paper>
                 </Box>
 
                 <Divider />
 
                 <Stack spacing={1.25}>
-                  <Typography variant="h5">Місця</Typography>
+                  <Typography variant="h5">{t("common.spots")}</Typography>
 
                   {selectedLot.spots.length > 0 ? (
                     <Stack spacing={1}>
@@ -438,23 +468,23 @@ export function AdminPage() {
                                 <Chip
                                   size="small"
                                   color={spot.occupied ? "warning" : "success"}
-                                  label={spot.occupied ? "Зайнято" : "Вільно"}
+                                  label={spot.occupied ? t("monitoring.status.occupied") : t("monitoring.status.free")}
                                 />
                               </Stack>
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
-                                deviceId: {spot.deviceId}
+                                {t("common.deviceId")}: {spot.deviceId}
                               </Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Останнє вимірювання: {spot.distanceCm !== null ? `${spot.distanceCm.toFixed(0)} см` : "ще немає даних"}
+                                {t("common.lastMeasurement")}: {spot.distanceCm !== null ? t("common.distanceCm", { value: formatWholeNumber(spot.distanceCm) }) : t("common.noDataYet")}
                               </Typography>
                               <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
-                                Оновлено: {formatLastUpdate(spot.lastTelemetryAtUtc)}
+                                {t("common.updatedAt")}: {formatLastUpdate(spot.lastTelemetryAtUtc, locale, t)}
                               </Typography>
                             </Box>
 
                             <Stack direction="row" spacing={1} alignItems="flex-start">
                               <Button size="small" startIcon={<EditRoundedIcon />} onClick={() => openEditSpotDialog(selectedLot.id, spot)}>
-                                Змінити
+                                {t("common.edit")}
                               </Button>
                               <Button
                                 size="small"
@@ -462,7 +492,7 @@ export function AdminPage() {
                                 startIcon={<DeleteOutlineRoundedIcon />}
                                 onClick={() => setDeleteDialog({ type: "spot", id: spot.id, label: spot.displayName })}
                               >
-                                Видалити
+                                {t("common.delete")}
                               </Button>
                             </Stack>
                           </Stack>
@@ -470,16 +500,16 @@ export function AdminPage() {
                       ))}
                     </Stack>
                   ) : (
-                    <Alert severity="info">На цій парковці поки немає місць. Додай перше місце і воно одразу потрапить на карту та в realtime.</Alert>
+                    <Alert severity="info">{t("admin.spotsEmpty")}</Alert>
                   )}
                 </Stack>
               </Stack>
             ) : (
               <Stack spacing={1.5} sx={{ minHeight: 420, justifyContent: "center", alignItems: "center", textAlign: "center" }}>
                 <LocalParkingRoundedIcon sx={{ fontSize: 44, color: "text.disabled" }} />
-                <Typography variant="h5">Оберіть парковку</Typography>
+                <Typography variant="h5">{t("admin.selectLotTitle")}</Typography>
                 <Typography color="text.secondary" sx={{ maxWidth: 420 }}>
-                  Після вибору тут з&apos;являться координати, список місць та дії для редагування.
+                  {t("admin.selectLotDescription")}
                 </Typography>
               </Stack>
             )}
@@ -488,38 +518,38 @@ export function AdminPage() {
       </Stack>
 
       <Dialog open={lotDialog.open} onClose={() => !saving && setLotDialog({ open: false })} fullWidth maxWidth="sm">
-        <DialogTitle>{lotDialog.open && lotDialog.mode === "create" ? "Нова парковка" : "Редагування парковки"}</DialogTitle>
+        <DialogTitle>{lotDialog.open && lotDialog.mode === "create" ? t("admin.newLot") : t("admin.editLot")}</DialogTitle>
         <DialogContent>
           {lotDialog.open ? (
             <Stack spacing={2} sx={{ mt: 1 }}>
               <TextField
-                label="Назва"
+                label={t("admin.field.name")}
                 value={lotDialog.value.name}
                 onChange={(event) => setLotDialog((current) => current.open ? { ...current, value: { ...current.value, name: event.target.value } } : current)}
                 fullWidth
               />
               <TextField
-                label="Місто"
+                label={t("admin.field.city")}
                 value={lotDialog.value.city}
                 onChange={(event) => setLotDialog((current) => current.open ? { ...current, value: { ...current.value, city: event.target.value } } : current)}
                 fullWidth
               />
               <TextField
-                label="Адреса"
+                label={t("admin.field.address")}
                 value={lotDialog.value.address}
                 onChange={(event) => setLotDialog((current) => current.open ? { ...current, value: { ...current.value, address: event.target.value } } : current)}
                 fullWidth
               />
               <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
                 <TextField
-                  label="Latitude"
+                  label={t("admin.field.latitude")}
                   type="number"
                   value={lotDialog.value.latitude}
                   onChange={(event) => setLotDialog((current) => current.open ? { ...current, value: { ...current.value, latitude: Number(event.target.value) } } : current)}
                   fullWidth
                 />
                 <TextField
-                  label="Longitude"
+                  label={t("admin.field.longitude")}
                   type="number"
                   value={lotDialog.value.longitude}
                   onChange={(event) => setLotDialog((current) => current.open ? { ...current, value: { ...current.value, longitude: Number(event.target.value) } } : current)}
@@ -530,29 +560,29 @@ export function AdminPage() {
           ) : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setLotDialog({ open: false })} disabled={saving}>Скасувати</Button>
+          <Button onClick={() => setLotDialog({ open: false })} disabled={saving}>{t("common.cancel")}</Button>
           <Button variant="contained" onClick={() => void handleLotDialogSubmit()} disabled={saving}>
-            {lotDialog.open && lotDialog.mode === "create" ? "Створити" : "Зберегти"}
+            {lotDialog.open && lotDialog.mode === "create" ? t("common.create") : t("common.save")}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={spotDialog.open} onClose={() => !saving && setSpotDialog({ open: false })} fullWidth maxWidth="sm">
-        <DialogTitle>{spotDialog.open && spotDialog.mode === "create" ? "Нове місце" : "Редагування місця"}</DialogTitle>
+        <DialogTitle>{spotDialog.open && spotDialog.mode === "create" ? t("admin.newSpot") : t("admin.editSpot")}</DialogTitle>
         <DialogContent>
           {spotDialog.open ? (
             <Stack spacing={2} sx={{ mt: 1 }}>
               <TextField
-                label="Назва місця"
+                label={t("admin.field.spotName")}
                 value={spotDialog.value.displayName}
                 onChange={(event) => setSpotDialog((current) => current.open ? { ...current, value: { ...current.value, displayName: event.target.value } } : current)}
                 fullWidth
               />
               <FormControl fullWidth>
-                <InputLabel id="spot-source-label">Тип джерела</InputLabel>
+                <InputLabel id="spot-source-label">{t("admin.field.sourceKind")}</InputLabel>
                 <Select
                   labelId="spot-source-label"
-                  label="Тип джерела"
+                  label={t("admin.field.sourceKind")}
                   value={spotDialog.value.sourceKind}
                   onChange={(event) => setSpotDialog((current) => current.open ? {
                     ...current,
@@ -562,47 +592,45 @@ export function AdminPage() {
                     },
                   } : current)}
                 >
-                  <MenuItem value={SPOT_SOURCE.REAL}>Real</MenuItem>
-                  <MenuItem value={SPOT_SOURCE.SIMULATED}>Simulated</MenuItem>
+                  <MenuItem value={SPOT_SOURCE.REAL}>{t("admin.source.real")}</MenuItem>
+                  <MenuItem value={SPOT_SOURCE.SIMULATED}>{t("admin.source.simulated")}</MenuItem>
                 </Select>
-                <FormHelperText>
-                  Real очікує фізичний device ID, а Simulated може згенерувати його автоматично.
-                </FormHelperText>
+                <FormHelperText>{t("admin.field.sourceKindHelp")}</FormHelperText>
               </FormControl>
               <TextField
-                label="Device ID"
+                label={t("admin.field.deviceId")}
                 value={spotDialog.value.deviceId}
                 onChange={(event) => setSpotDialog((current) => current.open ? { ...current, value: { ...current.value, deviceId: event.target.value } } : current)}
-                placeholder={spotDialog.value.sourceKind === SPOT_SOURCE.SIMULATED ? "Залиши порожнім для автогенерації" : "Наприклад ps-lviv-001"}
+                placeholder={spotDialog.value.sourceKind === SPOT_SOURCE.SIMULATED ? t("admin.field.deviceId.autoPlaceholder") : t("admin.field.deviceId.realPlaceholder")}
                 fullWidth
               />
             </Stack>
           ) : null}
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setSpotDialog({ open: false })} disabled={saving}>Скасувати</Button>
+          <Button onClick={() => setSpotDialog({ open: false })} disabled={saving}>{t("common.cancel")}</Button>
           <Button variant="contained" onClick={() => void handleSpotDialogSubmit()} disabled={saving}>
-            {spotDialog.open && spotDialog.mode === "create" ? "Створити" : "Зберегти"}
+            {spotDialog.open && spotDialog.mode === "create" ? t("common.create") : t("common.save")}
           </Button>
         </DialogActions>
       </Dialog>
 
       <Dialog open={deleteDialog !== null} onClose={() => !saving && setDeleteDialog(null)} fullWidth maxWidth="xs">
-        <DialogTitle>Підтвердь видалення</DialogTitle>
+        <DialogTitle>{t("admin.deleteConfirmTitle")}</DialogTitle>
         <DialogContent>
           <Stack spacing={1.25} sx={{ mt: 1 }}>
             <Typography>
               {deleteDialog?.type === "lot"
-                ? `Видалити парковку "${deleteDialog.label}" разом із місцями та історією телеметрії?`
-                : `Видалити місце "${deleteDialog?.label}" разом із його історією телеметрії?`}
+                ? t("admin.deleteConfirmLot", { label: deleteDialog.label })
+                : t("admin.deleteConfirmSpot", { label: deleteDialog?.label ?? "" })}
             </Typography>
-            <Alert severity="warning">Цю дію не можна буде скасувати.</Alert>
+            <Alert severity="warning">{t("admin.deleteWarning")}</Alert>
           </Stack>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setDeleteDialog(null)} disabled={saving}>Скасувати</Button>
+          <Button onClick={() => setDeleteDialog(null)} disabled={saving}>{t("common.cancel")}</Button>
           <Button color="error" variant="contained" onClick={() => void handleDelete()} disabled={saving}>
-            Видалити
+            {t("common.delete")}
           </Button>
         </DialogActions>
       </Dialog>

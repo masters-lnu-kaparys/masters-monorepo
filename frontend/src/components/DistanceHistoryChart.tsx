@@ -1,4 +1,5 @@
 import { Box, Stack, Typography } from "@mui/material";
+import { useI18n } from "../i18n/LanguageProvider";
 import type { SpotHistoryPoint } from "../types/api";
 
 type DistanceHistoryChartProps = {
@@ -31,6 +32,8 @@ function normalizePoints(points: SpotHistoryPoint[]) {
 }
 
 export function DistanceHistoryChart({ points }: DistanceHistoryChartProps) {
+  const { t } = useI18n();
+
   if (points.length === 0) {
     return (
       <Box
@@ -44,7 +47,7 @@ export function DistanceHistoryChart({ points }: DistanceHistoryChartProps) {
         }}
       >
         <Typography variant="body2" color="text.secondary">
-          Поки що немає достатньо вимірювань для цього місця.
+          {t("chart.empty")}
         </Typography>
       </Box>
     );
@@ -63,7 +66,7 @@ export function DistanceHistoryChart({ points }: DistanceHistoryChartProps) {
             "linear-gradient(180deg, rgba(17,97,73,0.12) 0%, rgba(217,119,6,0.06) 100%)",
         }}
       >
-        <svg width="100%" height="220" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label="Історія вимірювань">
+        <svg width="100%" height="220" viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={t("chart.aria")}>
           <polyline
             fill="none"
             stroke="#116149"
@@ -76,7 +79,7 @@ export function DistanceHistoryChart({ points }: DistanceHistoryChartProps) {
       </Box>
 
       <Typography variant="caption" color="text.secondary">
-        Відстань до об'єкта в сантиметрах за останні точки спостереження.
+        {t("chart.caption")}
       </Typography>
     </Stack>
   );

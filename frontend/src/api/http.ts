@@ -1,3 +1,6 @@
+import { getLocaleTag, getStoredLanguage } from "../i18n/config";
+import { translate } from "../i18n/messages";
+
 const DEFAULT_API_BASE_URL = "https://localhost:5001";
 export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL;
 
@@ -9,9 +12,51 @@ type ApiClientConfig = {
   onForbidden?: () => void;
 };
 
+type ProblemDetailsPayload = {
+  title?: string;
+  detail?: string;
+  errors?: Record<string, string[]>;
+};
+
 let accessTokenProvider: AccessTokenProvider | null = null;
 let unauthorizedHandler: (() => void) | undefined;
 let forbiddenHandler: (() => void) | undefined;
+
+function t(key: string, params?: Record<string, string | number>) {
+  return translate(getStoredLanguage(), key, params);
+}
+
+async function resolveErrorMessage(response: Response): Promise<string | null> {
+  const raw = (await response.text()).trim();
+
+  if (!raw) {
+    return null;
+  }
+
+  const contentType = response.headers.get("Content-Type") ?? "";
+
+  if (contentType.includes("json")) {
+    try {
+      const payload = JSON.parse(raw) as ProblemDetailsPayload | string;
+
+      if (typeof payload === "string") {
+        return payload;
+      }
+
+      const validationMessage = payload.errors
+        ? Object.values(payload.errors)
+            .flat()
+            .find((message) => Boolean(message))
+        : undefined;
+
+      return validationMessage ?? payload.detail ?? payload.title ?? raw;
+    } catch {
+      return raw;
+    }
+  }
+
+  return raw;
+}
 
 export class ApiError extends Error {
   public readonly status: number;
@@ -37,7 +82,7 @@ export function resetApiClient() {
 
 export async function requestAccessToken(): Promise<string> {
   if (!accessTokenProvider) {
-    throw new Error("The API client is not configured with an access token provider.");
+    throw new Error(t("api.notConfigured"));
   }
 
   try {
@@ -52,6 +97,7 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   const token = await requestAccessToken();
   const headers = new Headers(init?.headers ?? {});
   headers.set("Accept", "application/json");
+  headers.set("Accept-Language", getLocaleTag(getStoredLanguage()));
   headers.set("Authorization", `Bearer ${token}`);
 
   if (init?.body && !headers.has("Content-Type")) {
@@ -65,17 +111,17 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
 
   if (response.status === 401) {
     unauthorizedHandler?.();
-    throw new ApiError("The session has expired. Please sign in again.", 401);
+    throw new ApiError((await resolveErrorMessage(response)) ?? t("api.unauthorized"), 401);
   }
 
   if (response.status === 403) {
     forbiddenHandler?.();
-    throw new ApiError("You do not have permission to perform this action.", 403);
+    throw new ApiError((await resolveErrorMessage(response)) ?? t("api.forbidden"), 403);
   }
 
   if (!response.ok) {
-    const text = await response.text();
-    throw new ApiError(text || `Request failed with status ${response.status}.`, response.status);
+    const message = (await resolveErrorMessage(response)) ?? t("api.requestFailed", { status: response.status });
+    throw new ApiError(message, response.status);
   }
 
   if (response.status === 204) {

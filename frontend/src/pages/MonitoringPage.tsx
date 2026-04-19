@@ -21,10 +21,12 @@ import {
 import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import type { LatLngExpression } from "leaflet";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { CircleMarker, MapContainer, TileLayer, Tooltip, useMap, ZoomControl } from "react-leaflet";
-import { apiBaseUrl, requestAccessToken } from "../api/http";
 import { fetchLotDetails, fetchMapOverview, fetchSpotHistory } from "../api/client";
+import { apiBaseUrl, requestAccessToken } from "../api/http";
 import { DistanceHistoryChart } from "../components/DistanceHistoryChart";
+import { useI18n } from "../i18n/LanguageProvider";
 import type { LotDetails, MapOverview, MapSnapshot, SpotHistory } from "../types/api";
 
 type LiveConnectionState = "connecting" | "connected" | "disconnected";
@@ -33,6 +35,8 @@ type MapViewState = {
   center: [number, number];
   zoom: number;
 };
+
+type TranslationFn = (key: string, params?: Record<string, string | number>) => string;
 
 function MapViewUpdater({ center, zoom }: MapViewState) {
   const map = useMap();
@@ -53,7 +57,7 @@ function SummaryCard({
 }: {
   title: string;
   value: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
 }) {
   return (
     <Paper
@@ -105,59 +109,69 @@ function SummaryCard({
 }
 
 function LiveStateChip({ state }: { state: LiveConnectionState }) {
+  const { t } = useI18n();
+
   if (state === "connected") {
-    return <Chip color="success" icon={<SensorsRoundedIcon />} label="Оновлюється наживо" />;
+    return <Chip color="success" icon={<SensorsRoundedIcon />} label={t("monitoring.live.connected")} />;
   }
 
   if (state === "connecting") {
-    return <Chip color="warning" icon={<SensorsRoundedIcon />} label="Підключаємо оновлення" />;
+    return <Chip color="warning" icon={<SensorsRoundedIcon />} label={t("monitoring.live.connecting")} />;
   }
 
-  return <Chip color="default" icon={<SensorsRoundedIcon />} label="Працюємо з останніми даними" />;
+  return <Chip color="default" icon={<SensorsRoundedIcon />} label={t("monitoring.live.disconnected")} />;
 }
 
 function SpotStatusChip({ occupied }: { occupied: boolean }) {
+  const { t } = useI18n();
+
   return (
     <Chip
       size="small"
       color={occupied ? "warning" : "success"}
-      label={occupied ? "Зайнято" : "Вільно"}
+      label={occupied ? t("monitoring.status.occupied") : t("monitoring.status.free")}
       sx={{ minWidth: 88 }}
     />
   );
 }
 
-function formatUpdateLabel(utc: string | null): string {
+function formatUpdateLabel(utc: string | null, locale: string, t: TranslationFn): string {
   if (!utc) {
-    return "ще немає даних";
+    return t("common.noDataYet");
   }
 
-  const now = Date.now();
   const measuredAt = new Date(utc).getTime();
-  const diffMinutes = Math.round((now - measuredAt) / 60000);
+  const diffSeconds = Math.round((measuredAt - Date.now()) / 1000);
 
-  if (diffMinutes <= 1) {
-    return "щойно";
+  if (Math.abs(diffSeconds) <= 60) {
+    return t("common.justNow");
   }
 
-  if (diffMinutes < 60) {
-    return `${diffMinutes} хв тому`;
+  const relativeTimeFormat = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+
+  if (Math.abs(diffSeconds) < 3600) {
+    return relativeTimeFormat.format(Math.round(diffSeconds / 60), "minute");
   }
 
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) {
-    return `${diffHours} год тому`;
+  if (Math.abs(diffSeconds) < 86400) {
+    return relativeTimeFormat.format(Math.round(diffSeconds / 3600), "hour");
   }
 
-  return new Date(utc).toLocaleString();
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(utc));
 }
 
-function formatDateTime(utc: string | null): string {
+function formatDateTime(utc: string | null, locale: string, t: TranslationFn): string {
   if (!utc) {
-    return "немає оновлень";
+    return t("common.noUpdates");
   }
 
-  return new Date(utc).toLocaleString();
+  return new Intl.DateTimeFormat(locale, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(utc));
 }
 
 function occupancyColor(occupancyRate: number): string {
@@ -187,24 +201,32 @@ function haversineDistanceKm(a: [number, number], b: [number, number]): number {
   return 2 * earthRadiusKm * Math.asin(Math.sqrt(haversine));
 }
 
-function describeLocationMode(state: GeolocationState, city: string | null) {
+function describeLocationMode(
+  state: GeolocationState,
+  city: string | null,
+  fallbackCity: string,
+  t: TranslationFn,
+) {
+  const cityLabel = city && city.trim().length > 0 ? city : fallbackCity;
+
   switch (state) {
     case "resolved":
-      return "Карта центрована до вашої локації.";
+      return t("monitoring.location.resolved");
     case "denied":
-      return `Доступ до геолокації вимкнено. Показуємо демо-місто ${city ?? "на карті"}.`;
+      return t("monitoring.location.denied", { city: cityLabel });
     case "unsupported":
-      return `Браузер не підтримує геолокацію. Показуємо демо-місто ${city ?? "на карті"}.`;
+      return t("monitoring.location.unsupported", { city: cityLabel });
     case "fallback":
-      return `Поруч не знайдено доступних парковок. Показуємо демо-місто ${city ?? "на карті"}.`;
+      return t("monitoring.location.fallback", { city: cityLabel });
     case "searching":
-      return "Шукаємо найближчі парковки відносно вашої локації.";
+      return t("monitoring.location.searching");
     default:
-      return `Показуємо парковки міста ${city ?? "за замовчуванням"}.`;
+      return t("monitoring.location.default", { city: cityLabel });
   }
 }
 
 export function MonitoringPage() {
+  const { t, language, locale } = useI18n();
   const [overview, setOverview] = useState<MapOverview | null>(null);
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
   const [lotDetails, setLotDetails] = useState<LotDetails | null>(null);
@@ -220,6 +242,23 @@ export function MonitoringPage() {
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
   const selectedLotIdRef = useRef<number | null>(null);
   const hasInitialLocationResolution = useRef(false);
+
+  const numberFormatter = useMemo(
+    () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
+    [locale],
+  );
+
+  const fallbackCityLabel = language === "uk" ? "демо-місто" : "the demo city";
+
+  const formatWholeNumber = useCallback(
+    (value: number) => numberFormatter.format(value),
+    [numberFormatter],
+  );
+
+  const formatDistance = useCallback(
+    (value: number) => t("common.distanceCm", { value: formatWholeNumber(value) }),
+    [formatWholeNumber, t],
+  );
 
   const selectedLot = useMemo(
     () => overview?.lots.find((lot) => lot.id === selectedLotId) ?? null,
@@ -283,11 +322,11 @@ export function MonitoringPage() {
       const nextOverview = await fetchMapOverview();
       applyOverview(nextOverview);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Не вдалося завантажити карту парковок.");
+      setError(loadError instanceof Error ? loadError.message : t("monitoring.loadOverviewError"));
     } finally {
       setLoadingOverview(false);
     }
-  }, [applyOverview]);
+  }, [applyOverview, t]);
 
   const loadLotDetails = useCallback(
     async (lotId: number) => {
@@ -297,12 +336,12 @@ export function MonitoringPage() {
         const nextLot = (await fetchLotDetails(lotId)) as LotDetails;
         applyLotDetails(nextLot);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : "Не вдалося завантажити дані парковки.");
+        setError(loadError instanceof Error ? loadError.message : t("monitoring.loadLotError"));
       } finally {
         setLoadingLot(false);
       }
     },
-    [applyLotDetails],
+    [applyLotDetails, t],
   );
 
   const loadHistory = useCallback(async (spotId: number | null) => {
@@ -320,11 +359,11 @@ export function MonitoringPage() {
       setHistory(nextHistory);
       setError(null);
     } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : "Не вдалося завантажити історію місця.");
+      setError(loadError instanceof Error ? loadError.message : t("monitoring.loadHistoryError"));
     } finally {
       setLoadingHistory(false);
     }
-  }, []);
+  }, [t]);
 
   const locateUser = useCallback(
     (nextOverview: MapOverview) => {
@@ -497,8 +536,10 @@ export function MonitoringPage() {
     await loadHistory(selectedSpotId);
   }, [loadHistory, loadLotDetails, loadOverview, selectedLotId, selectedSpotId]);
 
-  const locationHint = describeLocationMode(geolocationState, overview?.city ?? null);
-  const occupancyPercent = overview ? `${(overview.summary.occupancyRate * 100).toFixed(0)}%` : "-";
+  const locationHint = describeLocationMode(geolocationState, overview?.city ?? null, fallbackCityLabel, t);
+  const occupancyPercent = overview
+    ? new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }).format(overview.summary.occupancyRate)
+    : "-";
   const mapCenter: LatLngExpression = mapView?.center ?? [49.8419, 24.0315];
 
   return (
@@ -520,13 +561,13 @@ export function MonitoringPage() {
                 fontWeight: 800,
               }}
             >
-              SMART PARKING MONITORING
+              {t("monitoring.overline")}
             </Typography>
             <Typography variant="h3" sx={{ maxWidth: 760, mb: 1 }}>
-              Парковки поруч у реальному часі
+              {t("monitoring.title")}
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
-              На карті видно завантаженість міських парковок, а в панелі праворуч можна роздивитися кожне місце окремо.
+              {t("monitoring.description")}
             </Typography>
           </Box>
 
@@ -544,11 +585,11 @@ export function MonitoringPage() {
               }}
               disabled={!overview}
             >
-              Знайти мене
+              {t("common.findMe")}
             </Button>
 
             <Button variant="contained" color="primary" startIcon={<RefreshRoundedIcon />} onClick={() => void refreshAll()}>
-              Оновити
+              {t("common.refresh")}
             </Button>
           </Stack>
         </Stack>
@@ -578,22 +619,22 @@ export function MonitoringPage() {
               }}
             >
               <SummaryCard
-                title="Парковки"
-                value={overview ? String(overview.summary.totalLots) : "-"}
+                title={t("monitoring.summary.lots")}
+                value={overview ? formatWholeNumber(overview.summary.totalLots) : "-"}
                 icon={<PlaceRoundedIcon />}
               />
               <SummaryCard
-                title="Вільні місця"
-                value={overview ? String(overview.summary.freeSpots) : "-"}
+                title={t("monitoring.summary.freeSpots")}
+                value={overview ? formatWholeNumber(overview.summary.freeSpots) : "-"}
                 icon={<LocalParkingRoundedIcon />}
               />
               <SummaryCard
-                title="Зайнято зараз"
-                value={overview ? String(overview.summary.occupiedSpots) : "-"}
+                title={t("monitoring.summary.occupiedNow")}
+                value={overview ? formatWholeNumber(overview.summary.occupiedSpots) : "-"}
                 icon={<TrafficRoundedIcon />}
               />
               <SummaryCard
-                title="Заповненість"
+                title={t("monitoring.summary.occupancy")}
                 value={occupancyPercent}
                 icon={<RouteRoundedIcon />}
               />
@@ -624,7 +665,7 @@ export function MonitoringPage() {
                 <Stack justifyContent="center" alignItems="center" sx={{ minHeight: "100%" }} spacing={2}>
                   <CircularProgress size={32} />
                   <Typography variant="body2" color="text.secondary">
-                    Завантажуємо карту парковок...
+                    {t("monitoring.map.loading")}
                   </Typography>
                 </Stack>
               ) : overview ? (
@@ -660,8 +701,8 @@ export function MonitoringPage() {
                       >
                         <Tooltip direction="top" opacity={1} className="map-tooltip">
                           <div>
-                            <h4>Ви тут</h4>
-                            <p>Карта показує найближчі доступні парковки.</p>
+                            <h4>{t("monitoring.map.youAreHere")}</h4>
+                            <p>{t("monitoring.map.youAreHereDescription")}</p>
                           </div>
                         </Tooltip>
                       </CircleMarker>
@@ -691,7 +732,10 @@ export function MonitoringPage() {
                             <div>
                               <h4>{lot.name}</h4>
                               <p>
-                                {lot.freeSpots} вільно з {lot.totalSpots} місць
+                                {t("admin.lotAvailability", {
+                                  free: formatWholeNumber(lot.freeSpots),
+                                  total: formatWholeNumber(lot.totalSpots),
+                                })}
                               </p>
                             </div>
                           </Tooltip>
@@ -716,10 +760,10 @@ export function MonitoringPage() {
                       >
                         <LocalParkingRoundedIcon sx={{ fontSize: 40, color: "text.disabled", mb: 1 }} />
                         <Typography variant="h6" sx={{ mb: 0.5 }}>
-                          Наразі немає доступних парковок
+                          {t("monitoring.map.emptyTitle")}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          Щойно адміністратор додасть локації або воркер отримає нові дані, маркери з&apos;являться тут автоматично.
+                          {t("monitoring.map.emptyDescription")}
                         </Typography>
                       </Paper>
                     </Box>
@@ -728,9 +772,9 @@ export function MonitoringPage() {
               ) : (
                 <Stack justifyContent="center" alignItems="center" sx={{ minHeight: "100%" }} spacing={1}>
                   <LocalParkingRoundedIcon sx={{ fontSize: 44, color: "text.disabled" }} />
-                  <Typography variant="h6">Не вдалося підготувати карту</Typography>
+                  <Typography variant="h6">{t("monitoring.map.failedTitle")}</Typography>
                   <Typography variant="body2" color="text.secondary">
-                    Спробуй оновити сторінку або перевірити запуск backend API.
+                    {t("monitoring.map.failedDescription")}
                   </Typography>
                 </Stack>
               )}
@@ -750,7 +794,7 @@ export function MonitoringPage() {
               <Stack spacing={2.5}>
                 <Box>
                   <Typography variant="overline" sx={{ color: "secondary.main", fontWeight: 800, letterSpacing: "0.14em" }}>
-                    ОБРАНА ПАРКОВКА
+                    {t("monitoring.selectedLot.overline")}
                   </Typography>
                   <Typography variant="h5" sx={{ mt: 0.5 }}>
                     {selectedLot.name}
@@ -759,7 +803,7 @@ export function MonitoringPage() {
                     {selectedLot.address}, {selectedLot.city}
                   </Typography>
                   <Typography variant="caption" color="text.secondary">
-                    Оновлено {formatUpdateLabel(selectedLot.lastUpdatedAtUtc)}
+                    {t("common.updatedAt")} {formatUpdateLabel(selectedLot.lastUpdatedAtUtc, locale, t)}
                   </Typography>
                 </Box>
 
@@ -770,12 +814,12 @@ export function MonitoringPage() {
                     gap: 1.25,
                   }}
                 >
-                  <SummaryCard title="Всього місць" value={String(selectedLot.totalSpots)} icon={<LocalParkingRoundedIcon />} />
-                  <SummaryCard title="Вільно" value={String(selectedLot.freeSpots)} icon={<PlaceRoundedIcon />} />
-                  <SummaryCard title="Зайнято" value={String(selectedLot.occupiedSpots)} icon={<TrafficRoundedIcon />} />
+                  <SummaryCard title={t("common.totalSpots")} value={formatWholeNumber(selectedLot.totalSpots)} icon={<LocalParkingRoundedIcon />} />
+                  <SummaryCard title={t("common.freeSpots")} value={formatWholeNumber(selectedLot.freeSpots)} icon={<PlaceRoundedIcon />} />
+                  <SummaryCard title={t("common.occupiedSpots")} value={formatWholeNumber(selectedLot.occupiedSpots)} icon={<TrafficRoundedIcon />} />
                   <SummaryCard
-                    title="Останнє оновлення"
-                    value={formatUpdateLabel(selectedLot.lastUpdatedAtUtc)}
+                    title={t("common.lastUpdate")}
+                    value={formatUpdateLabel(selectedLot.lastUpdatedAtUtc, locale, t)}
                     icon={<SensorsRoundedIcon />}
                   />
                 </Box>
@@ -783,7 +827,7 @@ export function MonitoringPage() {
                 <Divider />
 
                 <Stack spacing={1.5}>
-                  <Typography variant="h6">Місця на парковці</Typography>
+                  <Typography variant="h6">{t("monitoring.spotsTitle")}</Typography>
 
                   {loadingLot && !lotDetails ? (
                     <Box sx={{ py: 3, textAlign: "center" }}>
@@ -816,14 +860,14 @@ export function MonitoringPage() {
                               <Box>
                                 <Typography fontWeight={800}>{spot.displayName}</Typography>
                                 <Typography variant="caption" color="text.secondary">
-                                  {spot.distanceCm ? `${spot.distanceCm.toFixed(0)} см` : "очікуємо перше вимірювання"}
+                                  {spot.distanceCm !== null ? formatDistance(spot.distanceCm) : t("monitoring.firstMeasurementPending")}
                                 </Typography>
                               </Box>
 
                               <Stack alignItems="flex-end" spacing={0.75}>
                                 <SpotStatusChip occupied={spot.occupied} />
                                 <Typography variant="caption" color="text.secondary">
-                                  {formatUpdateLabel(spot.lastUpdatedAtUtc)}
+                                  {formatUpdateLabel(spot.lastUpdatedAtUtc, locale, t)}
                                 </Typography>
                               </Stack>
                             </Stack>
@@ -838,14 +882,17 @@ export function MonitoringPage() {
 
                 <Stack spacing={1.5}>
                   <Box>
-                    <Typography variant="h6">Динаміка вибраного місця</Typography>
+                    <Typography variant="h6">{t("monitoring.historyTitle")}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       {selectedSpot
-                        ? `${selectedSpot.displayName} — ${selectedSpot.occupied ? "зайнято" : "вільно"}`
-                        : "Оберіть місце на парковці"}
+                        ? t("monitoring.historyStatus", {
+                            spot: selectedSpot.displayName,
+                            status: selectedSpot.occupied ? t("monitoring.status.occupied") : t("monitoring.status.free"),
+                          })
+                        : t("monitoring.historySelectSpot")}
                     </Typography>
                     <Typography variant="caption" color="text.secondary">
-                      {selectedSpot ? formatDateTime(selectedSpot.lastUpdatedAtUtc) : "Історія підвантажиться автоматично"}
+                      {selectedSpot ? formatDateTime(selectedSpot.lastUpdatedAtUtc, locale, t) : t("monitoring.historyAuto")}
                     </Typography>
                   </Box>
 
@@ -861,7 +908,7 @@ export function MonitoringPage() {
                 <Divider />
 
                 <Stack spacing={1.25}>
-                  <Typography variant="h6">Останні зміни</Typography>
+                  <Typography variant="h6">{t("monitoring.recentChanges")}</Typography>
 
                   {lotDetails?.recentActivity.length ? (
                     <Stack spacing={1}>
@@ -881,13 +928,13 @@ export function MonitoringPage() {
                             <Box>
                               <Typography fontWeight={700}>{activity.spotName}</Typography>
                               <Typography variant="caption" color="text.secondary">
-                                Відстань: {activity.distanceCm.toFixed(0)} см
+                                {t("monitoring.distanceLabel", { value: formatWholeNumber(activity.distanceCm) })}
                               </Typography>
                             </Box>
                             <Box sx={{ textAlign: "right" }}>
                               <SpotStatusChip occupied={activity.occupied} />
                               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
-                                {formatUpdateLabel(activity.measuredAtUtc)}
+                                {formatUpdateLabel(activity.measuredAtUtc, locale, t)}
                               </Typography>
                             </Box>
                           </Stack>
@@ -896,7 +943,7 @@ export function MonitoringPage() {
                     </Stack>
                   ) : (
                     <Typography variant="body2" color="text.secondary">
-                      Щойно з&apos;являться нові події, вони відобразяться тут.
+                      {t("monitoring.recentChangesEmpty")}
                     </Typography>
                   )}
                 </Stack>
@@ -904,9 +951,9 @@ export function MonitoringPage() {
             ) : (
               <Stack justifyContent="center" alignItems="center" spacing={1.5} sx={{ minHeight: "100%" }}>
                 <PlaceRoundedIcon sx={{ fontSize: 42, color: "text.disabled" }} />
-                <Typography variant="h6">Оберіть парковку на карті</Typography>
+                <Typography variant="h6">{t("monitoring.chooseParkingTitle")}</Typography>
                 <Typography variant="body2" color="text.secondary" textAlign="center">
-                  Праворуч з&apos;явиться детальна інформація про місця, доступність і недавні оновлення.
+                  {t("monitoring.chooseParkingDescription")}
                 </Typography>
               </Stack>
             )}

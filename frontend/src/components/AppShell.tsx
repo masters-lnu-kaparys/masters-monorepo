@@ -3,6 +3,8 @@ import LogoutRoundedIcon from "@mui/icons-material/LogoutRounded";
 import MapRoundedIcon from "@mui/icons-material/MapRounded";
 import { AppBar, Box, Button, Chip, Container, Stack, Toolbar, Typography } from "@mui/material";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
+import { useI18n } from "../i18n/LanguageProvider";
+import { LanguageSwitcher } from "./LanguageSwitcher";
 
 type AppShellProps = {
   isAdmin: boolean;
@@ -26,6 +28,7 @@ function NavButton({ to, label, active }: { to: string; label: string; active: b
 
 export function AppShell({ isAdmin, userName, onLogout }: AppShellProps) {
   const location = useLocation();
+  const { t } = useI18n();
 
   return (
     <Box sx={{ minHeight: "100vh" }}>
@@ -49,15 +52,15 @@ export function AppShell({ isAdmin, userName, onLogout }: AppShellProps) {
             >
               <Stack direction={{ xs: "column", md: "row" }} spacing={1.25} alignItems={{ xs: "stretch", md: "center" }}>
                 <Typography variant="h6" sx={{ fontWeight: 800 }}>
-                  Smart Parking
+                  {t("shell.appName")}
                 </Typography>
 
                 <Stack direction="row" spacing={1} flexWrap="wrap">
-                  <NavButton to="/" label="Карта" active={location.pathname === "/"} />
+                  <NavButton to="/" label={t("common.map")} active={location.pathname === "/"} />
                   {isAdmin ? (
                     <NavButton
                       to="/admin"
-                      label="Адмін-панель"
+                      label={t("common.adminPanel")}
                       active={location.pathname.startsWith("/admin")}
                     />
                   ) : null}
@@ -65,16 +68,17 @@ export function AppShell({ isAdmin, userName, onLogout }: AppShellProps) {
               </Stack>
 
               <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ xs: "stretch", sm: "center" }}>
+                <LanguageSwitcher />
                 <Chip
                   color={isAdmin ? "secondary" : "primary"}
                   icon={isAdmin ? <AdminPanelSettingsRoundedIcon /> : <MapRoundedIcon />}
-                  label={isAdmin ? "Роль: Admin" : "Роль: User"}
+                  label={isAdmin ? t("common.role.admin") : t("common.role.user")}
                 />
                 <Typography color="text.secondary" sx={{ maxWidth: 220 }} noWrap>
                   {userName}
                 </Typography>
                 <Button variant="outlined" startIcon={<LogoutRoundedIcon />} onClick={onLogout}>
-                  Вийти
+                  {t("common.signOut")}
                 </Button>
               </Stack>
             </Stack>
