@@ -1,8 +1,9 @@
 import ExploreRoundedIcon from "@mui/icons-material/ExploreRounded";
+import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
+import DirectionsCarFilledRoundedIcon from "@mui/icons-material/DirectionsCarFilledRounded";
 import LocationSearchingRoundedIcon from "@mui/icons-material/LocationSearchingRounded";
 import LocalParkingRoundedIcon from "@mui/icons-material/LocalParkingRounded";
 import PlaceRoundedIcon from "@mui/icons-material/PlaceRounded";
-import RefreshRoundedIcon from "@mui/icons-material/RefreshRounded";
 import RouteRoundedIcon from "@mui/icons-material/RouteRounded";
 import SensorsRoundedIcon from "@mui/icons-material/SensorsRounded";
 import TrafficRoundedIcon from "@mui/icons-material/TrafficRounded";
@@ -21,18 +22,27 @@ import { HubConnectionBuilder, LogLevel } from "@microsoft/signalr";
 import type { LatLngExpression } from "leaflet";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { CircleMarker, MapContainer, TileLayer, useMap, ZoomControl } from "react-leaflet";
+import { CircleMarker, MapContainer, Polyline, TileLayer, useMap, ZoomControl } from "react-leaflet";
 import { fetchLotDetails, fetchMapOverview, fetchSpotHistory } from "../api/client";
 import { apiBaseUrl, requestAccessToken } from "../api/http";
 import { DistanceHistoryChart } from "../components/DistanceHistoryChart";
 import { useI18n } from "../i18n/LanguageProvider";
+import { fetchDrivingRoute } from "../routing/osrm";
 import type { LotDetails, MapOverview, MapSnapshot, SpotHistory } from "../types/api";
-
-type LiveConnectionState = "connecting" | "connected" | "disconnected";
 type GeolocationState = "idle" | "searching" | "resolved" | "fallback" | "denied" | "unsupported";
 type MapViewState = {
   center: [number, number];
   zoom: number;
+};
+type RouteViewState = {
+  coordinates: [number, number][];
+  distanceMeters: number;
+  durationSeconds: number;
+  destinationLotId: number;
+};
+
+type LocateUserOptions = {
+  scrollToMap?: boolean;
 };
 
 type TranslationFn = (key: string, params?: Record<string, string | number>) => string;
@@ -41,10 +51,33 @@ function MapViewUpdater({ center, zoom }: MapViewState) {
   const map = useMap();
 
   useEffect(() => {
-    map.setView(center, zoom, {
+    map.invalidateSize({
+      animate: false,
+      pan: false,
+    });
+
+    map.flyTo(center, zoom, {
       animate: true,
+      duration: 0.75,
     });
   }, [center, map, zoom]);
+
+  return null;
+}
+
+function MapRouteFitter({ coordinates }: { coordinates: [number, number][] }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (coordinates.length < 2) {
+      return;
+    }
+
+    map.fitBounds(coordinates, {
+      padding: [48, 48],
+      animate: true,
+    });
+  }, [coordinates, map]);
 
   return null;
 }
@@ -124,49 +157,6 @@ function SummaryCard({
   );
 }
 
-function LiveStateChip({ state }: { state: LiveConnectionState }) {
-  const { t } = useI18n();
-  const config = state === "connected"
-    ? {
-        label: t("monitoring.live.connected"),
-        color: "#116149",
-        background: "rgba(17, 97, 73, 0.10)",
-      }
-    : state === "connecting"
-      ? {
-          label: t("monitoring.live.connecting"),
-          color: "#d97706",
-          background: "rgba(217, 119, 6, 0.10)",
-        }
-      : {
-          label: t("monitoring.live.disconnected"),
-          color: "#475569",
-          background: "rgba(100, 116, 139, 0.10)",
-        };
-
-  return (
-    <Box
-      sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 1,
-        px: 1.5,
-        py: 1,
-        borderRadius: "8px",
-        border: "1px solid rgba(17, 97, 73, 0.10)",
-        bgcolor: config.background,
-        color: config.color,
-        fontWeight: 700,
-      }}
-    >
-      <SensorsRoundedIcon fontSize="small" />
-      <Typography variant="body2" sx={{ color: "inherit", fontWeight: 700 }}>
-        {config.label}
-      </Typography>
-    </Box>
-  );
-}
-
 function SpotStatusChip({ occupied }: { occupied: boolean }) {
   const { t } = useI18n();
   const config = occupied
@@ -240,6 +230,34 @@ function formatDateTime(utc: string | null, locale: string, t: TranslationFn): s
   }).format(new Date(utc));
 }
 
+function formatRouteDistance(distanceMeters: number, locale: string): string {
+  if (distanceMeters >= 1000) {
+    return new Intl.NumberFormat(locale, {
+      maximumFractionDigits: 1,
+      minimumFractionDigits: distanceMeters < 10000 ? 1 : 0,
+    }).format(distanceMeters / 1000);
+  }
+
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(distanceMeters);
+}
+
+function formatRouteDuration(durationSeconds: number, locale: string): string {
+  const totalMinutes = Math.max(1, Math.round(durationSeconds / 60));
+
+  if (totalMinutes < 60) {
+    return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(totalMinutes);
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (minutes === 0) {
+    return `${new Intl.NumberFormat(locale).format(hours)} h`;
+  }
+
+  return `${new Intl.NumberFormat(locale).format(hours)} h ${new Intl.NumberFormat(locale).format(minutes)} min`;
+}
+
 function occupancyColor(occupancyRate: number): string {
   if (occupancyRate >= 0.8) {
     return "#c2410c";
@@ -265,6 +283,10 @@ function haversineDistanceKm(a: [number, number], b: [number, number]): number {
     Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
   return 2 * earthRadiusKm * Math.asin(Math.sqrt(haversine));
+}
+
+function clampMapZoom(zoom: number): number {
+  return Math.min(Math.max(zoom, 13), 14);
 }
 
 function describeLocationMode(
@@ -302,12 +324,18 @@ export function MonitoringPage() {
   const [loadingLot, setLoadingLot] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [liveState, setLiveState] = useState<LiveConnectionState>("disconnected");
   const [geolocationState, setGeolocationState] = useState<GeolocationState>("idle");
   const [mapView, setMapView] = useState<MapViewState | null>(null);
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
+  const [routeView, setRouteView] = useState<RouteViewState | null>(null);
+  const [routingError, setRoutingError] = useState<string | null>(null);
+  const [routingInProgress, setRoutingInProgress] = useState(false);
   const selectedLotIdRef = useRef<number | null>(null);
   const hasInitialLocationResolution = useRef(false);
+  const mapCardRef = useRef<HTMLDivElement | null>(null);
+  const lastTrackedPositionRef = useRef<[number, number] | null>(null);
+  const lastRerouteAtRef = useRef(0);
+  const routeRefreshInFlightRef = useRef(false);
 
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
@@ -324,6 +352,36 @@ export function MonitoringPage() {
   const formatDistance = useCallback(
     (value: number) => t("common.distanceCm", { value: formatWholeNumber(value) }),
     [formatWholeNumber, t],
+  );
+  const formatDrivingDistance = useCallback(
+    (distanceMeters: number) => {
+      if (distanceMeters >= 1000) {
+        return t("monitoring.route.distanceKm", {
+          value: formatRouteDistance(distanceMeters, locale),
+        });
+      }
+
+      return t("monitoring.route.distanceMeters", {
+        value: formatRouteDistance(distanceMeters, locale),
+      });
+    },
+    [locale, t],
+  );
+  const formatDrivingDuration = useCallback(
+    (durationSeconds: number) => {
+      const totalMinutes = Math.max(1, Math.round(durationSeconds / 60));
+
+      if (totalMinutes < 60) {
+        return t("monitoring.route.durationMinutes", {
+          value: new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(totalMinutes),
+        });
+      }
+
+      return t("monitoring.route.durationLong", {
+        value: formatRouteDuration(durationSeconds, locale),
+      });
+    },
+    [locale, t],
   );
 
   const selectedLot = useMemo(
@@ -431,12 +489,29 @@ export function MonitoringPage() {
     }
   }, [t]);
 
+  const scrollToMap = useCallback(() => {
+    if (!mapCardRef.current) {
+      return;
+    }
+
+    const top = window.scrollY + mapCardRef.current.getBoundingClientRect().top - 104;
+
+    window.scrollTo({
+      top: Math.max(0, top),
+      behavior: "smooth",
+    });
+  }, []);
+
   const locateUser = useCallback(
-    (nextOverview: MapOverview) => {
+    (nextOverview: MapOverview, options?: LocateUserOptions) => {
       const fallbackView: MapViewState = {
         center: [nextOverview.mapCenter.latitude, nextOverview.mapCenter.longitude],
         zoom: nextOverview.zoom,
       };
+
+      if (options?.scrollToMap) {
+        scrollToMap();
+      }
 
       if (!("geolocation" in navigator)) {
         setGeolocationState("unsupported");
@@ -461,7 +536,7 @@ export function MonitoringPage() {
           if (nearestDistance <= nextOverview.userLocationMaxDistanceKm) {
             setMapView({
               center: nextPosition,
-              zoom: Math.max(nextOverview.zoom, 14),
+              zoom: clampMapZoom(nextOverview.zoom),
             });
             setUserPosition(nextPosition);
             setGeolocationState("resolved");
@@ -484,7 +559,7 @@ export function MonitoringPage() {
         },
       );
     },
-    [],
+    [scrollToMap],
   );
 
   useEffect(() => {
@@ -508,11 +583,20 @@ export function MonitoringPage() {
     if (!selectedLotId) {
       setLotDetails(null);
       setSelectedSpotId(null);
+      setRouteView(null);
+      setRoutingError(null);
       return;
     }
 
     void loadLotDetails(selectedLotId);
   }, [loadLotDetails, selectedLotId]);
+
+  useEffect(() => {
+    if (routeView && selectedLotId && routeView.destinationLotId !== selectedLotId) {
+      setRouteView(null);
+      setRoutingError(null);
+    }
+  }, [routeView, selectedLotId]);
 
   useEffect(() => {
     void loadHistory(selectedSpotId);
@@ -564,27 +648,10 @@ export function MonitoringPage() {
       }
     });
 
-    connection.onreconnecting(() => {
-      setLiveState("connecting");
-    });
-
-    connection.onreconnected(() => {
-      setLiveState("connected");
-    });
-
-    connection.onclose(() => {
-      setLiveState("disconnected");
-    });
-
-    setLiveState("connecting");
-
     void connection
       .start()
-      .then(() => {
-        setLiveState("connected");
-      })
       .catch(() => {
-        setLiveState("disconnected");
+        // Monitoring page stays usable without realtime updates.
       });
 
     return () => {
@@ -592,15 +659,120 @@ export function MonitoringPage() {
     };
   }, [loadLotDetails]);
 
-  const refreshAll = useCallback(async () => {
-    await loadOverview();
+  const refreshRoute = useCallback(
+    async (
+      origin: [number, number],
+      options?: {
+        force?: boolean;
+        showSpinner?: boolean;
+      },
+    ) => {
+      if (!selectedLot) {
+        return;
+      }
 
-    if (selectedLotId) {
-      await loadLotDetails(selectedLotId);
+      const now = Date.now();
+      const lastTrackedPosition = lastTrackedPositionRef.current;
+      const movedEnough = !lastTrackedPosition || haversineDistanceKm(origin, lastTrackedPosition) >= 0.04;
+      const enoughTimePassed = now - lastRerouteAtRef.current >= 8000;
+
+      if (!options?.force && (!movedEnough || !enoughTimePassed || routeRefreshInFlightRef.current)) {
+        return;
+      }
+
+      routeRefreshInFlightRef.current = true;
+
+      if (options?.showSpinner) {
+        setRoutingInProgress(true);
+      }
+
+      try {
+        const nextRoute = await fetchDrivingRoute(origin, [selectedLot.latitude, selectedLot.longitude]);
+
+        setRouteView({
+          ...nextRoute,
+          destinationLotId: selectedLot.id,
+        });
+        setRoutingError(null);
+        lastTrackedPositionRef.current = origin;
+        lastRerouteAtRef.current = now;
+      } catch {
+        if (options?.force) {
+          setRouteView(null);
+          setRoutingError(t("monitoring.route.error"));
+        }
+      } finally {
+        routeRefreshInFlightRef.current = false;
+
+        if (options?.showSpinner) {
+          setRoutingInProgress(false);
+        }
+      }
+    },
+    [selectedLot, t],
+  );
+
+  const buildRoute = useCallback(async () => {
+    if (!selectedLot || !userPosition) {
+      return;
     }
 
-    await loadHistory(selectedSpotId);
-  }, [loadHistory, loadLotDetails, loadOverview, selectedLotId, selectedSpotId]);
+    await refreshRoute(userPosition, {
+      force: true,
+      showSpinner: true,
+    });
+  }, [refreshRoute, selectedLot, userPosition]);
+
+  const openGoogleMaps = useCallback(() => {
+    if (!selectedLot) {
+      return;
+    }
+
+    const params = new URLSearchParams({
+      api: "1",
+      destination: `${selectedLot.latitude},${selectedLot.longitude}`,
+      travelmode: "driving",
+    });
+
+    if (userPosition) {
+      params.set("origin", `${userPosition[0]},${userPosition[1]}`);
+    }
+
+    window.open(`https://www.google.com/maps/dir/?${params.toString()}`, "_blank", "noopener,noreferrer");
+  }, [selectedLot, userPosition]);
+
+  useEffect(() => {
+    if (!routeView || !selectedLot || !("geolocation" in navigator)) {
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const nextPosition: [number, number] = [position.coords.latitude, position.coords.longitude];
+
+        setUserPosition(nextPosition);
+        setGeolocationState("resolved");
+        setMapView((previousView) => ({
+          center: nextPosition,
+          zoom: clampMapZoom(previousView?.zoom ?? overview?.zoom ?? 13),
+        }));
+
+        void refreshRoute(nextPosition);
+      },
+      () => {
+        // Keep the current route visible even if live tracking becomes unavailable.
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 3000,
+        timeout: 10000,
+      },
+    );
+
+    return () => {
+      navigator.geolocation.clearWatch(watchId);
+    };
+  }, [overview?.zoom, refreshRoute, routeView, selectedLot]);
 
   const locationHint = describeLocationMode(geolocationState, overview?.city ?? null, fallbackCityLabel, t);
   const occupancyPercent = overview
@@ -629,7 +801,17 @@ export function MonitoringPage() {
             >
               {t("monitoring.overline")}
             </Typography>
-            <Typography variant="h3" sx={{ maxWidth: 760, mb: 1 }}>
+            <Typography
+              variant="h3"
+              sx={{
+                mb: 1,
+                maxWidth: { xs: "100%", xl: 1040 },
+                pr: { xl: 2 },
+                fontSize: { xs: "2.55rem", md: "3.15rem", xl: "3.8rem" },
+                lineHeight: { xs: 1.06, xl: 0.98 },
+                whiteSpace: { xl: "nowrap" },
+              }}
+            >
               {t("monitoring.title")}
             </Typography>
             <Typography variant="body1" color="text.secondary" sx={{ maxWidth: 720 }}>
@@ -638,29 +820,27 @@ export function MonitoringPage() {
           </Box>
 
           <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ xs: "stretch", sm: "center" }}>
-            <LiveStateChip state={liveState} />
-
             <Button
               variant="outlined"
               color="primary"
               startIcon={<LocationSearchingRoundedIcon />}
               onClick={() => {
                 if (overview) {
-                  locateUser(overview);
+                  locateUser(overview, { scrollToMap: true });
+                }
+                else {
+                  scrollToMap();
                 }
               }}
               disabled={!overview}
             >
               {t("common.findMe")}
             </Button>
-
-            <Button variant="contained" color="primary" startIcon={<RefreshRoundedIcon />} onClick={() => void refreshAll()}>
-              {t("common.refresh")}
-            </Button>
           </Stack>
         </Stack>
 
         {error ? <Alert severity="error">{error}</Alert> : null}
+        {routingError ? <Alert severity="warning">{routingError}</Alert> : null}
 
         <Box
           sx={{
@@ -726,7 +906,11 @@ export function MonitoringPage() {
               </Typography>
             </Paper>
 
-            <Paper className="map-card" sx={{ borderRadius: "12px", border: "1px solid rgba(17, 97, 73, 0.12)" }}>
+            <Paper
+              ref={mapCardRef}
+              className="map-card"
+              sx={{ borderRadius: "12px", border: "1px solid rgba(17, 97, 73, 0.12)" }}
+            >
               {loadingOverview && !overview ? (
                 <Stack justifyContent="center" alignItems="center" sx={{ minHeight: "100%" }} spacing={2}>
                   <CircularProgress size={32} />
@@ -747,6 +931,7 @@ export function MonitoringPage() {
                       center={mapView?.center ?? [overview.mapCenter.latitude, overview.mapCenter.longitude]}
                       zoom={mapView?.zoom ?? overview.zoom}
                     />
+                    {routeView?.coordinates.length ? <MapRouteFitter coordinates={routeView.coordinates} /> : null}
                     <ZoomControl position="bottomright" />
 
                     <TileLayer
@@ -789,6 +974,17 @@ export function MonitoringPage() {
                         />
                       );
                     })}
+
+                    {routeView?.coordinates.length ? (
+                      <Polyline
+                        positions={routeView.coordinates}
+                        pathOptions={{
+                          color: "#0f766e",
+                          weight: 5,
+                          opacity: 0.9,
+                        }}
+                      />
+                    ) : null}
                   </MapContainer>
 
                   {overview.lots.length === 0 ? (
@@ -853,6 +1049,68 @@ export function MonitoringPage() {
                     {t("common.updatedAt")} {formatUpdateLabel(selectedLot.lastUpdatedAtUtc, locale, t)}
                   </Typography>
                 </Box>
+
+                <Stack direction={{ xs: "column", sm: "row" }} spacing={1.25} alignItems={{ xs: "stretch", sm: "center" }}>
+                  <Button
+                    variant="contained"
+                    startIcon={<DirectionsCarFilledRoundedIcon />}
+                    onClick={() => void buildRoute()}
+                    disabled={!userPosition || routingInProgress}
+                  >
+                    {routingInProgress ? t("monitoring.route.loading") : t("monitoring.route.build")}
+                  </Button>
+
+                  <Button
+                    variant="outlined"
+                    startIcon={<LaunchRoundedIcon />}
+                    onClick={openGoogleMaps}
+                    disabled={!selectedLot}
+                  >
+                    {t("monitoring.route.openExternal")}
+                  </Button>
+
+                  {routeView ? (
+                    <Button
+                      variant="text"
+                      color="inherit"
+                      onClick={() => {
+                        lastTrackedPositionRef.current = null;
+                        lastRerouteAtRef.current = 0;
+                        setRouteView(null);
+                        setRoutingError(null);
+                      }}
+                    >
+                      {t("monitoring.route.clear")}
+                    </Button>
+                  ) : null}
+                </Stack>
+
+                <Typography variant="body2" color="text.secondary">
+                  {!userPosition
+                    ? t("monitoring.route.needsLocation")
+                    : routeView
+                      ? t("monitoring.route.liveTracking")
+                      : t("monitoring.route.externalReady")}
+                </Typography>
+
+                {routeView ? (
+                  <Paper
+                    elevation={0}
+                    sx={{
+                      p: 1.5,
+                      borderRadius: "10px",
+                      border: "1px solid rgba(17, 97, 73, 0.12)",
+                      bgcolor: "rgba(17, 97, 73, 0.04)",
+                    }}
+                  >
+                    <Stack direction={{ xs: "column", sm: "row" }} spacing={0.75} justifyContent="space-between">
+                      <Typography fontWeight={700}>{t("monitoring.route.ready")}</Typography>
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDrivingDistance(routeView.distanceMeters)} {" / "} {formatDrivingDuration(routeView.durationSeconds)}
+                      </Typography>
+                    </Stack>
+                  </Paper>
+                ) : null}
 
                 <Box
                   sx={{
