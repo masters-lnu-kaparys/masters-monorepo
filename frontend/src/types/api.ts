@@ -111,6 +111,8 @@ export type AdminDetectedDevice = {
   lastMeasuredAtUtc: string;
   lastDistanceCm: number;
   lastOccupied: boolean;
+  lastLatitude: number | null;
+  lastLongitude: number | null;
 };
 
 export type AdminParkingLot = {

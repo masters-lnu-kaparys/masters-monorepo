@@ -29,4 +29,6 @@ public sealed record AdminDetectedDeviceDto(
     DateTimeOffset LastSeenAtUtc,
     DateTimeOffset LastMeasuredAtUtc,
     double LastDistanceCm,
-    bool LastOccupied);
+    bool LastOccupied,
+    double? LastLatitude,
+    double? LastLongitude);

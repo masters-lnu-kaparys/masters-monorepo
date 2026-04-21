@@ -392,6 +392,14 @@ export function AdminPage() {
                             distance: formatWholeNumber(device.lastDistanceCm),
                           })}
                         </Typography>
+                        {device.lastLatitude !== null && device.lastLongitude !== null ? (
+                          <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            {t("admin.detectedDevices.coordinates", {
+                              latitude: device.lastLatitude.toFixed(5),
+                              longitude: device.lastLongitude.toFixed(5),
+                            })}
+                          </Typography>
+                        ) : null}
                         <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                           {t("admin.detectedDevices.lastSeen", {
                             value: formatLastUpdate(device.lastSeenAtUtc, locale, t),

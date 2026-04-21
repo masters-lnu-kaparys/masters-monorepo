@@ -27,7 +27,9 @@ public sealed class GetAdminDetectedDevicesQueryHandler : IRequestHandler<GetAdm
                 x.LastSeenAtUtc,
                 x.LastMeasuredAtUtc,
                 x.LastDistanceCm,
-                x.LastOccupied))
+                x.LastOccupied,
+                x.LastLatitude,
+                x.LastLongitude))
             .ToListAsync(cancellationToken);
     }
 }
