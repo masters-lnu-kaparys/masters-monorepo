@@ -2,6 +2,7 @@ using Masters.Api.Application.Admin.Commands.CreateParkingLot;
 using Masters.Api.Application.Admin.Commands.CreateParkingSpot;
 using Masters.Api.Application.Admin.Commands.DeleteParkingLot;
 using Masters.Api.Application.Admin.Commands.DeleteParkingSpot;
+using Masters.Api.Application.Admin.Queries.GetAdminDetectedDevices;
 using Masters.Api.Application.Admin.Queries.GetAdminParkingLots;
 using Masters.Api.Application.Admin.Commands.UpdateParkingLot;
 using Masters.Api.Application.Admin.Commands.UpdateParkingSpot;
@@ -19,6 +20,7 @@ public sealed class Admin : EndpointGroupBase
     {
         groupBuilder.RequireAuthorization(Policies.AdminAccess);
         groupBuilder.MapGet(GetLots, "lots");
+        groupBuilder.MapGet(GetDetectedDevices, "devices/unassigned");
         groupBuilder.MapPost(CreateLot, "lots");
         groupBuilder.MapPut(UpdateLot, "lots/{lotId:long}");
         groupBuilder.MapDelete(DeleteLot, "lots/{lotId:long}");
@@ -32,6 +34,13 @@ public sealed class Admin : EndpointGroupBase
         CancellationToken cancellationToken)
     {
         return sender.Send(new GetAdminParkingLotsQuery(), cancellationToken);
+    }
+
+    private static Task<List<Application.Admin.Models.AdminDetectedDeviceDto>> GetDetectedDevices(
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        return sender.Send(new GetAdminDetectedDevicesQuery(), cancellationToken);
     }
 
     private static async Task<Created<long>> CreateLot(

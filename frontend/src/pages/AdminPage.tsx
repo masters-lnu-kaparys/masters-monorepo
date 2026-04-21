@@ -26,6 +26,7 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createAdminLot,
+  fetchAdminDetectedDevices,
   createAdminSpot,
   deleteAdminLot,
   deleteAdminSpot,
@@ -34,7 +35,13 @@ import {
   updateAdminSpot,
 } from "../api/client";
 import { useI18n } from "../i18n/LanguageProvider";
-import type { AdminParkingLot, AdminParkingSpot, SpotSourceKind, UpsertParkingLotInput } from "../types/api";
+import type {
+  AdminDetectedDevice,
+  AdminParkingLot,
+  AdminParkingSpot,
+  SpotSourceKind,
+  UpsertParkingLotInput,
+} from "../types/api";
 import { SPOT_SOURCE } from "../types/api";
 
 type LotDialogState =
@@ -92,6 +99,7 @@ function SpotSourceChip({ sourceKind }: { sourceKind: SpotSourceKind }) {
 export function AdminPage() {
   const { t, language, locale } = useI18n();
   const [lots, setLots] = useState<AdminParkingLot[]>([]);
+  const [detectedDevices, setDetectedDevices] = useState<AdminDetectedDevice[]>([]);
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -128,19 +136,24 @@ export function AdminPage() {
     setLoading(true);
 
     try {
-      const response = await fetchAdminLots();
-      setLots(response);
+      const [lotsResponse, detectedDevicesResponse] = await Promise.all([
+        fetchAdminLots(),
+        fetchAdminDetectedDevices(),
+      ]);
+
+      setLots(lotsResponse);
+      setDetectedDevices(detectedDevicesResponse);
       setError(null);
       setSelectedLotId((previousLotId) => {
-        if (response.length === 0) {
+        if (lotsResponse.length === 0) {
           return null;
         }
 
-        if (previousLotId && response.some((lot) => lot.id === previousLotId)) {
+        if (previousLotId && lotsResponse.some((lot) => lot.id === previousLotId)) {
           return previousLotId;
         }
 
-        return response[0].id;
+        return lotsResponse[0].id;
       });
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : t("admin.loadError"));
@@ -264,12 +277,15 @@ export function AdminPage() {
     });
   };
 
-  const openCreateSpotDialog = (lotId: number) => {
+  const openCreateSpotDialog = (
+    lotId: number,
+    initialValue?: { displayName: string; sourceKind: SpotSourceKind; deviceId: string },
+  ) => {
     setSpotDialog({
       mode: "create",
       open: true,
       lotId,
-      value: EMPTY_SPOT_FORM,
+      value: initialValue ?? EMPTY_SPOT_FORM,
     });
   };
 
@@ -284,6 +300,18 @@ export function AdminPage() {
         sourceKind: spot.sourceKind,
         deviceId: spot.deviceId,
       },
+    });
+  };
+
+  const handleAttachDetectedDevice = (device: AdminDetectedDevice) => {
+    if (!selectedLotId) {
+      return;
+    }
+
+    openCreateSpotDialog(selectedLotId, {
+      displayName: device.deviceId,
+      sourceKind: SPOT_SOURCE.REAL,
+      deviceId: device.deviceId,
     });
   };
 
@@ -315,6 +343,76 @@ export function AdminPage() {
 
         {error ? <Alert severity="error">{error}</Alert> : null}
         {successMessage ? <Alert severity="success" onClose={() => setSuccessMessage(null)}>{successMessage}</Alert> : null}
+
+        {detectedDevices.length > 0 ? (
+          <Paper sx={{ p: 2.5, borderRadius: 4, border: "1px solid rgba(214, 129, 4, 0.18)", bgcolor: "rgba(255, 248, 238, 0.92)" }}>
+            <Stack spacing={2}>
+              <Box>
+                <Typography variant="h5" sx={{ mb: 0.5 }}>
+                  {t("admin.detectedDevices.title")}
+                </Typography>
+                <Typography color="text.secondary">
+                  {t("admin.detectedDevices.description")}
+                </Typography>
+              </Box>
+
+              <Alert severity="warning">
+                {t("admin.detectedDevices.alert")}
+              </Alert>
+
+              <Stack spacing={1.25}>
+                {detectedDevices.map((device) => (
+                  <Paper
+                    key={device.deviceId}
+                    elevation={0}
+                    sx={{
+                      p: 1.75,
+                      borderRadius: 3,
+                      border: "1px solid rgba(214, 129, 4, 0.14)",
+                      bgcolor: "rgba(255,255,255,0.9)",
+                    }}
+                  >
+                    <Stack
+                      direction={{ xs: "column", md: "row" }}
+                      justifyContent="space-between"
+                      alignItems={{ xs: "flex-start", md: "center" }}
+                      spacing={1.5}
+                    >
+                      <Box>
+                        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+                          <Typography fontWeight={800}>{device.deviceId}</Typography>
+                          <Chip
+                            size="small"
+                            color={device.lastOccupied ? "warning" : "success"}
+                            label={device.lastOccupied ? t("monitoring.status.occupied") : t("monitoring.status.free")}
+                          />
+                        </Stack>
+                        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                          {t("admin.detectedDevices.lastMeasurement", {
+                            distance: formatWholeNumber(device.lastDistanceCm),
+                          })}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                          {t("admin.detectedDevices.lastSeen", {
+                            value: formatLastUpdate(device.lastSeenAtUtc, locale, t),
+                          })}
+                        </Typography>
+                      </Box>
+
+                      <Button
+                        variant="outlined"
+                        disabled={!selectedLotId}
+                        onClick={() => handleAttachDetectedDevice(device)}
+                      >
+                        {selectedLotId ? t("admin.detectedDevices.attachToSelectedLot") : t("admin.detectedDevices.selectLotFirst")}
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ))}
+              </Stack>
+            </Stack>
+          </Paper>
+        ) : null}
 
         <Box
           sx={{

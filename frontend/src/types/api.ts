@@ -104,6 +104,15 @@ export type AdminParkingSpot = {
   lastTelemetryAtUtc: string | null;
 };
 
+export type AdminDetectedDevice = {
+  deviceId: string;
+  firstSeenAtUtc: string;
+  lastSeenAtUtc: string;
+  lastMeasuredAtUtc: string;
+  lastDistanceCm: number;
+  lastOccupied: boolean;
+};
+
 export type AdminParkingLot = {
   id: number;
   name: string;

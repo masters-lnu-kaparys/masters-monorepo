@@ -1,4 +1,5 @@
 import type {
+  AdminDetectedDevice,
   AdminParkingLot,
   MapOverview,
   SpotHistory,
@@ -45,6 +46,10 @@ export async function fetchSpotHistory(
 
 export async function fetchAdminLots(): Promise<AdminParkingLot[]> {
   return getJson<AdminParkingLot[]>("/api/admin/lots");
+}
+
+export async function fetchAdminDetectedDevices(): Promise<AdminDetectedDevice[]> {
+  return getJson<AdminDetectedDevice[]>("/api/admin/devices/unassigned");
 }
 
 export async function createAdminLot(input: UpsertParkingLotInput): Promise<number> {

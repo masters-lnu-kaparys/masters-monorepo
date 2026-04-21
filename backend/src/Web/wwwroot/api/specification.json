@@ -70,6 +70,34 @@
         ]
       }
     },
+    "/api/admin/devices/unassigned": {
+      "get": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "GetDetectedDevices",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdminDetectedDeviceDto"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
     "/api/admin/lots/{lotId}": {
       "put": {
         "tags": [
@@ -539,6 +567,34 @@
           1,
           2
         ]
+      },
+      "AdminDetectedDeviceDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "firstSeenAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastMeasuredAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastDistanceCm": {
+            "type": "number",
+            "format": "double"
+          },
+          "lastOccupied": {
+            "type": "boolean"
+          }
+        }
       },
       "CreateParkingLotRequest": {
         "type": "object",

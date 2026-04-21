@@ -22,3 +22,11 @@ public sealed record AdminParkingLotListItemDto(
     int OccupiedSpots,
     int FreeSpots,
     IReadOnlyList<AdminParkingSpotDto> Spots);
+
+public sealed record AdminDetectedDeviceDto(
+    string DeviceId,
+    DateTimeOffset FirstSeenAtUtc,
+    DateTimeOffset LastSeenAtUtc,
+    DateTimeOffset LastMeasuredAtUtc,
+    double LastDistanceCm,
+    bool LastOccupied);
