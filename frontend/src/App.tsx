@@ -1,9 +1,10 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { useCallback, useLayoutEffect, useMemo } from "react";
+import { useCallback, useLayoutEffect } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { configureApiClient, resetApiClient } from "./api/http";
 import { APP_ROUTES } from "./app/routes";
-import { AUTH_CALLBACK_PATH, getEffectiveUserRoles, hasAuthCallbackParams } from "./auth/config";
+import { AUTH_CALLBACK_PATH, hasAuthCallbackParams } from "./auth/config";
+import { useEffectiveRoles } from "./auth/useEffectiveRoles";
 import { AppShell } from "./components/AppShell";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { useI18n } from "./i18n/LanguageProvider";
@@ -19,7 +20,7 @@ export default function App() {
   const { t } = useI18n();
   const navigate = useNavigate();
 
-  const roles = useMemo(() => getEffectiveUserRoles(user as Record<string, unknown> | undefined), [user]);
+  const { roles } = useEffectiveRoles();
   const isAdmin = roles.includes("Admin");
   const userName = user?.name ?? user?.email ?? user?.nickname ?? t("app.userFallbackName");
 
