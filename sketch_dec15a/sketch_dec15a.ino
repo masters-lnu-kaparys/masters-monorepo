@@ -15,6 +15,12 @@ const char* WIFI_PASS = "09021969";
 const char* IOT_HUB_HOSTNAME = "masters-kaparys.azure-devices.net";
 const char* DEVICE_ID = "ps-uzh-lot1-spot001";
 
+// Фіксовані координати місця встановлення сенсора.
+// Якщо сенсор перемістили, онови їх перед прошивкою.
+const bool SEND_DEVICE_LOCATION = true;
+const double DEVICE_LATITUDE = 49.83870;
+const double DEVICE_LONGITUDE = 23.99440;
+
 // ВАЖЛИВО: сюди вставляєш "Primary key" (base64) з Azure IoT Hub -> Devices -> твій device -> Primary key
 const char* DEVICE_KEY = "zF0Ld0w7fELBOUIwnCF3Z9ytsXYZhp6d4AIoTPMfWoU=";
 
@@ -352,7 +358,15 @@ void loop() {
     "\"deviceId\":\"" + String(DEVICE_ID) + "\"," +
     "\"ts\":" + String((unsigned long)now) + "," +
     "\"distanceCm\":" + String(cm, 1) + "," +
-    "\"occupied\":" + String(occupied ? "true" : "false") +
+    "\"occupied\":" + String(occupied ? "true" : "false");
+
+  if (SEND_DEVICE_LOCATION) {
+    payload +=
+      String(",\"latitude\":") + String(DEVICE_LATITUDE, 6) +
+      ",\"longitude\":" + String(DEVICE_LONGITUDE, 6);
+  }
+
+  payload +=
     "}";
 
   bool pubOk = mqtt.publish(topic.c_str(), payload.c_str());

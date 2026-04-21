@@ -73,24 +73,56 @@ The API expects Auth0 access tokens and reads roles from the namespaced claim `h
 Create in Auth0:
 
 1. SPA application for `frontend`
-2. API / Resource Server with audience `https://parking-api`
+2. API / Resource Server with audience `https://masters.api`
 3. roles `Admin` and `User`
 
 Recommended local callback/logout URLs:
 
 - `http://localhost:5173`
+- `http://localhost:5173/auth/callback`
 
-Enable Auth0 RBAC and add a Post-Login Action that copies user roles into both ID token and access token:
+Enable Auth0 RBAC and add a Post-Login Action that assigns the default `User` role to new accounts and copies roles into both ID token and access token.
+
+Ready-to-paste template:
+
+- `../docs/auth0/assign-default-user-role-post-login.js`
+
+Minimal action body:
 
 ```js
 exports.onExecutePostLogin = async (event, api) => {
   const namespace = "https://masters.api";
-  const roles = event.authorization?.roles ?? [];
+  const { ManagementClient } = require("auth0");
 
-  api.idToken.setCustomClaim(`${namespace}/roles`, roles);
-  api.accessToken.setCustomClaim(`${namespace}/roles`, roles);
+  let effectiveRoles = event.authorization?.roles ?? [];
+
+  if (effectiveRoles.length === 0) {
+    const management = new ManagementClient({
+      domain: event.secrets.domain,
+      clientId: event.secrets.clientId,
+      clientSecret: event.secrets.clientSecret,
+    });
+
+    await management.users.assignRoles(
+      { id: event.user.user_id },
+      { roles: [event.secrets.defaultUserRoleId] },
+    );
+
+    effectiveRoles = [event.secrets.defaultUserRoleName || "User"];
+  }
+
+  api.idToken.setCustomClaim(`${namespace}/roles`, effectiveRoles);
+  api.accessToken.setCustomClaim(`${namespace}/roles`, effectiveRoles);
 };
 ```
+
+Action secrets:
+
+- `domain`
+- `clientId`
+- `clientSecret`
+- `defaultUserRoleId`
+- `defaultUserRoleName`
 
 ## Run Worker
 
@@ -108,8 +140,11 @@ Main config keys:
 - `RealtimeEventHub:ConsumerGroup`
 - `Simulation:Enabled`
 - `Simulation:UpdateIntervalSeconds`
+- `DeviceBinding:MaxParkingLotDistanceKm`
 
 If `RealtimeEventHub:Enabled=false`, the worker still generates simulated parking activity.
+If `Simulation:Enabled=false`, the worker only listens to real telemetry.
+If `DeviceBinding:MaxParkingLotDistanceKm=0`, automatic lot matching by device coordinates is effectively disabled.
 
 Expected real device payload:
 
@@ -118,9 +153,13 @@ Expected real device payload:
   "deviceId": "ps-uzh-lot1-spot001",
   "ts": 1735689600,
   "distanceCm": 37.4,
-  "occupied": true
+  "occupied": true,
+  "latitude": 49.8387,
+  "longitude": 23.9944
 }
 ```
+
+`latitude` and `longitude` are optional, but if they are present the worker can automatically link a new real device to the nearest parking lot inside the configured `DeviceBinding:MaxParkingLotDistanceKm` radius.
 
 ## Run Frontend
 
