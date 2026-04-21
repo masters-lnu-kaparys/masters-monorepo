@@ -81,6 +81,14 @@ public sealed class UpdateParkingSpotCommandHandler : IRequestHandler<UpdatePark
             _text,
             cancellationToken);
 
+        var detectedDevice = await _dbContext.DetectedDevices
+            .SingleOrDefaultAsync(x => x.DeviceId == entity.DeviceId, cancellationToken);
+
+        if (detectedDevice is not null)
+        {
+            _dbContext.DetectedDevices.Remove(detectedDevice);
+        }
+
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

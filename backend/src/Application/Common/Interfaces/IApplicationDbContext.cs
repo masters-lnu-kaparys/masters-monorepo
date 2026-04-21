@@ -5,6 +5,8 @@ namespace Masters.Api.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
+    DbSet<DetectedDevice> DetectedDevices { get; }
+
     DbSet<ParkingLot> ParkingLots { get; }
 
     DbSet<ParkingSpot> ParkingSpots { get; }

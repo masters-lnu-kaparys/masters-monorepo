@@ -51,6 +51,7 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         SpotSourceKind sourceKind,
         CancellationToken cancellationToken)
     {
+        var receivedAtUtc = _timeProvider.GetUtcNow();
         var spot = await _dbContext.ParkingSpots
             .Include(x => x.ParkingLot)
             .SingleOrDefaultAsync(x => x.DeviceId == message.DeviceId, cancellationToken);
@@ -62,9 +63,10 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
                 return new TelemetryWriteResult(TelemetryWriteOutcome.UnknownSpot);
             }
 
-            var lot = await ResolveLotForRealDeviceAsync(message.DeviceId, cancellationToken);
+            var lot = await ResolveConfiguredLotForRealDeviceAsync(message.DeviceId, cancellationToken);
             if (lot is null)
             {
+                await UpsertDetectedDeviceAsync(message, receivedAtUtc, cancellationToken);
                 return new TelemetryWriteResult(TelemetryWriteOutcome.UnknownSpot);
             }
 
@@ -94,7 +96,13 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
                 spot.DisplayName);
         }
 
-        var receivedAtUtc = _timeProvider.GetUtcNow();
+        var detectedDevice = await _dbContext.DetectedDevices
+            .SingleOrDefaultAsync(x => x.DeviceId == message.DeviceId, cancellationToken);
+
+        if (detectedDevice is not null)
+        {
+            _dbContext.DetectedDevices.Remove(detectedDevice);
+        }
 
         spot.IsOccupied = message.Occupied;
         spot.LastDistanceCm = message.DistanceCm;
@@ -121,17 +129,41 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         }
     }
 
-    private async Task<ParkingLot?> ResolveLotForRealDeviceAsync(string deviceId, CancellationToken cancellationToken)
+    private async Task UpsertDetectedDeviceAsync(
+        DeviceTelemetryMessage message,
+        DateTimeOffset receivedAtUtc,
+        CancellationToken cancellationToken)
+    {
+        var entity = await _dbContext.DetectedDevices
+            .SingleOrDefaultAsync(x => x.DeviceId == message.DeviceId, cancellationToken);
+
+        if (entity is null)
+        {
+            entity = new DetectedDevice
+            {
+                DeviceId = message.DeviceId,
+                FirstSeenAtUtc = receivedAtUtc
+            };
+
+            _dbContext.DetectedDevices.Add(entity);
+        }
+
+        entity.LastSeenAtUtc = receivedAtUtc;
+        entity.LastMeasuredAtUtc = message.MeasuredAtUtc;
+        entity.LastDistanceCm = message.DistanceCm;
+        entity.LastOccupied = message.Occupied;
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task<ParkingLot?> ResolveConfiguredLotForRealDeviceAsync(string deviceId, CancellationToken cancellationToken)
     {
         var configuredLot = _demoTopologyOptions.Lots
-            .FirstOrDefault(x => x.RealSpotDeviceIds.Contains(deviceId, StringComparer.OrdinalIgnoreCase))
-            ?? _demoTopologyOptions.Lots.FirstOrDefault();
+            .FirstOrDefault(x => x.RealSpotDeviceIds.Contains(deviceId, StringComparer.OrdinalIgnoreCase));
 
         if (configuredLot is null)
         {
-            return await _dbContext.ParkingLots
-                .OrderBy(x => x.Id)
-                .FirstOrDefaultAsync(cancellationToken);
+            return null;
         }
 
         var lot = await _dbContext.ParkingLots

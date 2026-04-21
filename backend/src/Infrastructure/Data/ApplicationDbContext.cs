@@ -9,6 +9,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
+    public DbSet<DetectedDevice> DetectedDevices => Set<DetectedDevice>();
+
     public DbSet<ParkingLot> ParkingLots => Set<ParkingLot>();
 
     public DbSet<ParkingSpot> ParkingSpots => Set<ParkingSpot>();

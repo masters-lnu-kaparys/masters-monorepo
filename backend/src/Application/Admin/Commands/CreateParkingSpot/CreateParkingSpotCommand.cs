@@ -85,6 +85,14 @@ public sealed class CreateParkingSpotCommandHandler : IRequestHandler<CreatePark
             DeviceId = deviceId
         };
 
+        var detectedDevice = await _dbContext.DetectedDevices
+            .SingleOrDefaultAsync(x => x.DeviceId == deviceId, cancellationToken);
+
+        if (detectedDevice is not null)
+        {
+            _dbContext.DetectedDevices.Remove(detectedDevice);
+        }
+
         _dbContext.ParkingSpots.Add(entity);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
