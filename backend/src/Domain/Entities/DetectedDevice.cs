@@ -13,4 +13,8 @@ public sealed class DetectedDevice : BaseAuditableEntity
     public double LastDistanceCm { get; set; }
 
     public bool LastOccupied { get; set; }
+
+    public double? LastLatitude { get; set; }
+
+    public double? LastLongitude { get; set; }
 }

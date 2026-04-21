@@ -8,6 +8,7 @@ var builder = Host.CreateApplicationBuilder(args);
 
 builder.Services.Configure<RealtimeEventHubOptions>(builder.Configuration.GetSection(RealtimeEventHubOptions.SectionName));
 builder.Services.Configure<SimulationOptions>(builder.Configuration.GetSection(SimulationOptions.SectionName));
+builder.Services.Configure<DeviceBindingOptions>(builder.Configuration.GetSection(DeviceBindingOptions.SectionName));
 builder.AddInfrastructureServices();
 builder.Services.AddScoped<IUser, WorkerUser>();
 builder.Services.AddSingleton<TelemetryPayloadParser>();

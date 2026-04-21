@@ -3,6 +3,7 @@ using Masters.Api.Domain.Enums;
 using Masters.Api.Infrastructure.Data;
 using Masters.Api.Infrastructure.Options;
 using Masters.Api.Worker.Models;
+using Masters.Api.Worker.Options;
 using Masters.Api.Worker.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -41,7 +42,8 @@ public class ParkingTelemetryWriterTests
         var writer = new ParkingTelemetryWriter(
             dbContext,
             TimeProvider.System,
-            Options.Create(new DemoTopologyOptions()));
+            Options.Create(new DemoTopologyOptions()),
+            Options.Create(new DeviceBindingOptions()));
 
         var result = await writer.WriteAsync(
             new DeviceTelemetryMessage("ps-real-001", DateTimeOffset.UtcNow, 21.5d, true),
@@ -73,7 +75,11 @@ public class ParkingTelemetryWriterTests
             ]
         });
 
-        var writer = new ParkingTelemetryWriter(dbContext, TimeProvider.System, options);
+        var writer = new ParkingTelemetryWriter(
+            dbContext,
+            TimeProvider.System,
+            options,
+            Options.Create(new DeviceBindingOptions()));
 
         var result = await writer.WriteAsync(
             new DeviceTelemetryMessage("ps-real-001", DateTimeOffset.UtcNow, 24.3d, true),
@@ -107,7 +113,8 @@ public class ParkingTelemetryWriterTests
         var writer = new ParkingTelemetryWriter(
             dbContext,
             TimeProvider.System,
-            Options.Create(new DemoTopologyOptions()));
+            Options.Create(new DemoTopologyOptions()),
+            Options.Create(new DeviceBindingOptions()));
 
         var measuredAtUtc = DateTimeOffset.UtcNow;
         var result = await writer.WriteAsync(
@@ -123,6 +130,53 @@ public class ParkingTelemetryWriterTests
         detectedDevice.LastMeasuredAtUtc.ShouldBe(measuredAtUtc);
         detectedDevice.LastDistanceCm.ShouldBe(31.2d);
         detectedDevice.LastOccupied.ShouldBeTrue();
+    }
+
+    [Test]
+    public async Task ShouldAssignRealDeviceToNearestLotWhenCoordinatesAreProvided()
+    {
+        await using var dbContext = CreateDbContext();
+        dbContext.ParkingLots.AddRange(
+            new ParkingLot
+            {
+                Name = "Вокзальна стоянка",
+                City = "Львів",
+                Address = "пл. Двірцева, 1",
+                Latitude = 49.8387d,
+                Longitude = 23.9944d
+            },
+            new ParkingLot
+            {
+                Name = "Центральна парковка",
+                City = "Львів",
+                Address = "пл. Ринок, 1",
+                Latitude = 49.8418d,
+                Longitude = 24.0316d
+            });
+        await dbContext.SaveChangesAsync();
+
+        var writer = new ParkingTelemetryWriter(
+            dbContext,
+            TimeProvider.System,
+            Options.Create(new DemoTopologyOptions()),
+            Options.Create(new DeviceBindingOptions
+            {
+                MaxParkingLotDistanceKm = 0.4d
+            }));
+
+        var result = await writer.WriteAsync(
+            new DeviceTelemetryMessage("ps-lviv-station-01", DateTimeOffset.UtcNow, 22.7d, true, 49.83872d, 23.99445d),
+            SpotSourceKind.Real,
+            CancellationToken.None);
+
+        result.Outcome.ShouldBe(TelemetryWriteOutcome.Saved);
+
+        var savedSpot = await dbContext.ParkingSpots
+            .Include(x => x.ParkingLot)
+            .SingleAsync();
+
+        savedSpot.ParkingLot.Name.ShouldBe("Вокзальна стоянка");
+        dbContext.DetectedDevices.Count().ShouldBe(0);
     }
 
     private static ApplicationDbContext CreateDbContext()

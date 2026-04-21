@@ -3,6 +3,7 @@ using Masters.Api.Domain.Enums;
 using Masters.Api.Infrastructure.Data;
 using Masters.Api.Infrastructure.Options;
 using Masters.Api.Worker.Models;
+using Masters.Api.Worker.Options;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -35,15 +36,18 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
     private readonly ApplicationDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
     private readonly DemoTopologyOptions _demoTopologyOptions;
+    private readonly DeviceBindingOptions _deviceBindingOptions;
 
     public ParkingTelemetryWriter(
         ApplicationDbContext dbContext,
         TimeProvider timeProvider,
-        IOptions<DemoTopologyOptions> demoTopologyOptions)
+        IOptions<DemoTopologyOptions> demoTopologyOptions,
+        IOptions<DeviceBindingOptions> deviceBindingOptions)
     {
         _dbContext = dbContext;
         _timeProvider = timeProvider;
         _demoTopologyOptions = demoTopologyOptions.Value;
+        _deviceBindingOptions = deviceBindingOptions.Value;
     }
 
     public async Task<TelemetryWriteResult> WriteAsync(
@@ -63,7 +67,7 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
                 return new TelemetryWriteResult(TelemetryWriteOutcome.UnknownSpot);
             }
 
-            var lot = await ResolveConfiguredLotForRealDeviceAsync(message.DeviceId, cancellationToken);
+            var lot = await ResolveParkingLotForRealDeviceAsync(message, cancellationToken);
             if (lot is null)
             {
                 await UpsertDetectedDeviceAsync(message, receivedAtUtc, cancellationToken);
@@ -152,20 +156,45 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         entity.LastMeasuredAtUtc = message.MeasuredAtUtc;
         entity.LastDistanceCm = message.DistanceCm;
         entity.LastOccupied = message.Occupied;
+        entity.LastLatitude = message.Latitude;
+        entity.LastLongitude = message.Longitude;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private async Task<ParkingLot?> ResolveConfiguredLotForRealDeviceAsync(string deviceId, CancellationToken cancellationToken)
+    private async Task<ParkingLot?> ResolveParkingLotForRealDeviceAsync(
+        DeviceTelemetryMessage message,
+        CancellationToken cancellationToken)
     {
         var configuredLot = _demoTopologyOptions.Lots
-            .FirstOrDefault(x => x.RealSpotDeviceIds.Contains(deviceId, StringComparer.OrdinalIgnoreCase));
+            .FirstOrDefault(x => x.RealSpotDeviceIds.Contains(message.DeviceId, StringComparer.OrdinalIgnoreCase));
 
-        if (configuredLot is null)
+        if (configuredLot is not null)
         {
-            return null;
+            return await ResolveConfiguredLotAsync(configuredLot, cancellationToken);
         }
 
+        if (message.Latitude is not null && message.Longitude is not null)
+        {
+            var nearestLotId = await ResolveNearestLotIdAsync(
+                message.Latitude.Value,
+                message.Longitude.Value,
+                cancellationToken);
+
+            if (nearestLotId.HasValue)
+            {
+                return await _dbContext.ParkingLots
+                    .SingleAsync(x => x.Id == nearestLotId.Value, cancellationToken);
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<ParkingLot> ResolveConfiguredLotAsync(
+        DemoLotOptions configuredLot,
+        CancellationToken cancellationToken)
+    {
         var lot = await _dbContext.ParkingLots
             .SingleOrDefaultAsync(
                 x => x.City == configuredLot.City && x.Name == configuredLot.Name,
@@ -191,6 +220,38 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         return lot;
     }
 
+    private async Task<long?> ResolveNearestLotIdAsync(
+        double latitude,
+        double longitude,
+        CancellationToken cancellationToken)
+    {
+        var lots = await _dbContext.ParkingLots
+            .AsNoTracking()
+            .Select(x => new
+            {
+                x.Id,
+                x.Latitude,
+                x.Longitude
+            })
+            .ToListAsync(cancellationToken);
+
+        var nearestLot = lots
+            .Select(x => new
+            {
+                x.Id,
+                DistanceKm = CalculateDistanceKm(latitude, longitude, x.Latitude, x.Longitude)
+            })
+            .OrderBy(x => x.DistanceKm)
+            .FirstOrDefault();
+
+        if (nearestLot is null || nearestLot.DistanceKm > _deviceBindingOptions.MaxParkingLotDistanceKm)
+        {
+            return null;
+        }
+
+        return nearestLot.Id;
+    }
+
     private string ResolveLotKey(ParkingLot lot)
     {
         var configuredLot = _demoTopologyOptions.Lots
@@ -206,4 +267,27 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         return ex.InnerException is SqlException sqlException
             && (sqlException.Number == 2601 || sqlException.Number == 2627);
     }
+
+    private static double CalculateDistanceKm(
+        double latitudeA,
+        double longitudeA,
+        double latitudeB,
+        double longitudeB)
+    {
+        const double earthRadiusKm = 6371d;
+
+        var deltaLatitude = DegreesToRadians(latitudeB - latitudeA);
+        var deltaLongitude = DegreesToRadians(longitudeB - longitudeA);
+        var latitudeARadians = DegreesToRadians(latitudeA);
+        var latitudeBRadians = DegreesToRadians(latitudeB);
+
+        var haversine = Math.Sin(deltaLatitude / 2) * Math.Sin(deltaLatitude / 2)
+            + Math.Cos(latitudeARadians) * Math.Cos(latitudeBRadians)
+            * Math.Sin(deltaLongitude / 2) * Math.Sin(deltaLongitude / 2);
+
+        var arc = 2 * Math.Atan2(Math.Sqrt(haversine), Math.Sqrt(1 - haversine));
+        return earthRadiusKm * arc;
+    }
+
+    private static double DegreesToRadians(double degrees) => degrees * (Math.PI / 180d);
 }

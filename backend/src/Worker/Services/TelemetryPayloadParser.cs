@@ -28,7 +28,18 @@ public sealed class TelemetryPayloadParser
                 return false;
             }
 
-            message = new DeviceTelemetryMessage(deviceId, measuredAtUtc, distanceCm, occupied);
+            double latitude = default;
+            double longitude = default;
+            var hasCoordinates = TryReadCoordinate(root, "latitude", -90d, 90d, out latitude)
+                && TryReadCoordinate(root, "longitude", -180d, 180d, out longitude);
+
+            message = new DeviceTelemetryMessage(
+                deviceId,
+                measuredAtUtc,
+                distanceCm,
+                occupied,
+                hasCoordinates ? latitude : null,
+                hasCoordinates ? longitude : null);
             return true;
         }
         catch (JsonException)
@@ -112,5 +123,33 @@ public sealed class TelemetryPayloadParser
         }
 
         return false;
+    }
+
+    private static bool TryReadCoordinate(
+        JsonElement root,
+        string propertyName,
+        double minValue,
+        double maxValue,
+        out double value)
+    {
+        value = default;
+
+        if (!root.TryGetProperty(propertyName, out var property))
+        {
+            return false;
+        }
+
+        var parsed = property.ValueKind switch
+        {
+            JsonValueKind.Number => property.TryGetDouble(out value),
+            JsonValueKind.String => double.TryParse(
+                property.GetString(),
+                NumberStyles.Float,
+                CultureInfo.InvariantCulture,
+                out value),
+            _ => false
+        };
+
+        return parsed && value >= minValue && value <= maxValue;
     }
 }

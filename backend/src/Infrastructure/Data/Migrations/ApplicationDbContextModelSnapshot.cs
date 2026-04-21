@@ -47,6 +47,12 @@ namespace Masters.Api.Infrastructure.Data.Migrations
                     b.Property<double>("LastDistanceCm")
                         .HasColumnType("float");
 
+                    b.Property<double?>("LastLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("LastLongitude")
+                        .HasColumnType("float");
+
                     b.Property<DateTimeOffset>("LastMeasuredAtUtc")
                         .HasColumnType("datetimeoffset");
 

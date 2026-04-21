@@ -9,7 +9,7 @@ public class TelemetryPayloadParserTests
     [Test]
     public void ShouldParseValidPayload()
     {
-        const string payload = "{\"deviceId\":\"ps-uzh-lot1-spot001\",\"ts\":1735689600,\"distanceCm\":37.4,\"occupied\":true}";
+        const string payload = "{\"deviceId\":\"ps-uzh-lot1-spot001\",\"ts\":1735689600,\"distanceCm\":37.4,\"occupied\":true,\"latitude\":49.8387,\"longitude\":23.9944}";
 
         var parsed = _parser.TryParse(payload, out var message);
 
@@ -19,6 +19,8 @@ public class TelemetryPayloadParserTests
         message.DistanceCm.ShouldBe(37.4d);
         message.Occupied.ShouldBeTrue();
         message.MeasuredAtUtc.ShouldBe(DateTimeOffset.FromUnixTimeSeconds(1735689600));
+        message.Latitude.ShouldBe(49.8387d);
+        message.Longitude.ShouldBe(23.9944d);
     }
 
     [Test]
