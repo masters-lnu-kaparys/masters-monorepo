@@ -593,6 +593,16 @@
           },
           "lastOccupied": {
             "type": "boolean"
+          },
+          "lastLatitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "lastLongitude": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
           }
         }
       },

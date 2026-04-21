@@ -11,76 +11,120 @@ namespace Masters.Api.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.CreateTable(
-                name: "ParkingSpots",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    DeviceId = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    DisplayName = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
-                    IsOccupied = table.Column<bool>(type: "bit", nullable: false),
-                    LastDistanceCm = table.Column<double>(type: "float", nullable: true),
-                    LastTelemetryAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: true),
-                    Created = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    CreatedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    LastModified = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    LastModifiedBy = table.Column<string>(type: "nvarchar(max)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ParkingSpots", x => x.Id);
-                });
+            migrationBuilder.Sql(
+                """
+                IF OBJECT_ID(N'[ParkingSpots]', N'U') IS NULL
+                BEGIN
+                    CREATE TABLE [ParkingSpots] (
+                        [Id] bigint NOT NULL IDENTITY,
+                        [DeviceId] nvarchar(128) NOT NULL,
+                        [DisplayName] nvarchar(128) NOT NULL,
+                        [IsOccupied] bit NOT NULL,
+                        [LastDistanceCm] float NULL,
+                        [LastTelemetryAtUtc] datetimeoffset NULL,
+                        [Created] datetimeoffset NOT NULL,
+                        [CreatedBy] nvarchar(max) NULL,
+                        [LastModified] datetimeoffset NOT NULL,
+                        [LastModifiedBy] nvarchar(max) NULL,
+                        CONSTRAINT [PK_ParkingSpots] PRIMARY KEY ([Id])
+                    );
+                END
+                """);
 
-            migrationBuilder.CreateTable(
-                name: "ParkingTelemetry",
-                columns: table => new
-                {
-                    Id = table.Column<long>(type: "bigint", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    ParkingSpotId = table.Column<long>(type: "bigint", nullable: false),
-                    MeasuredAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    ReceivedAtUtc = table.Column<DateTimeOffset>(type: "datetimeoffset", nullable: false),
-                    DistanceCm = table.Column<double>(type: "float", nullable: false),
-                    Occupied = table.Column<bool>(type: "bit", nullable: false)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ParkingTelemetry", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ParkingTelemetry_ParkingSpots_ParkingSpotId",
-                        column: x => x.ParkingSpotId,
-                        principalTable: "ParkingSpots",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                });
+            migrationBuilder.Sql(
+                """
+                IF OBJECT_ID(N'[ParkingTelemetry]', N'U') IS NULL
+                BEGIN
+                    CREATE TABLE [ParkingTelemetry] (
+                        [Id] bigint NOT NULL IDENTITY,
+                        [ParkingSpotId] bigint NOT NULL,
+                        [MeasuredAtUtc] datetimeoffset NOT NULL,
+                        [ReceivedAtUtc] datetimeoffset NOT NULL,
+                        [DistanceCm] float NOT NULL,
+                        [Occupied] bit NOT NULL,
+                        CONSTRAINT [PK_ParkingTelemetry] PRIMARY KEY ([Id]),
+                        CONSTRAINT [FK_ParkingTelemetry_ParkingSpots_ParkingSpotId]
+                            FOREIGN KEY ([ParkingSpotId]) REFERENCES [ParkingSpots] ([Id]) ON DELETE CASCADE
+                    );
+                END
+                """);
 
-            migrationBuilder.CreateIndex(
-                name: "IX_ParkingSpots_DeviceId",
-                table: "ParkingSpots",
-                column: "DeviceId",
-                unique: true);
+            migrationBuilder.Sql(
+                """
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = N'IX_ParkingSpots_DeviceId'
+                      AND object_id = OBJECT_ID(N'[ParkingSpots]')
+                )
+                BEGIN
+                    CREATE UNIQUE INDEX [IX_ParkingSpots_DeviceId]
+                    ON [ParkingSpots] ([DeviceId]);
+                END
+                """);
 
-            migrationBuilder.CreateIndex(
-                name: "IX_ParkingTelemetry_MeasuredAtUtc",
-                table: "ParkingTelemetry",
-                column: "MeasuredAtUtc");
+            migrationBuilder.Sql(
+                """
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.foreign_keys
+                    WHERE name = N'FK_ParkingTelemetry_ParkingSpots_ParkingSpotId'
+                ) AND OBJECT_ID(N'[ParkingTelemetry]', N'U') IS NOT NULL
+                  AND OBJECT_ID(N'[ParkingSpots]', N'U') IS NOT NULL
+                BEGIN
+                    ALTER TABLE [ParkingTelemetry]
+                    ADD CONSTRAINT [FK_ParkingTelemetry_ParkingSpots_ParkingSpotId]
+                    FOREIGN KEY ([ParkingSpotId]) REFERENCES [ParkingSpots] ([Id]) ON DELETE CASCADE;
+                END
+                """);
 
-            migrationBuilder.CreateIndex(
-                name: "IX_ParkingTelemetry_ParkingSpotId_MeasuredAtUtc",
-                table: "ParkingTelemetry",
-                columns: new[] { "ParkingSpotId", "MeasuredAtUtc" },
-                unique: true);
+            migrationBuilder.Sql(
+                """
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = N'IX_ParkingTelemetry_MeasuredAtUtc'
+                      AND object_id = OBJECT_ID(N'[ParkingTelemetry]')
+                )
+                BEGIN
+                    CREATE INDEX [IX_ParkingTelemetry_MeasuredAtUtc]
+                    ON [ParkingTelemetry] ([MeasuredAtUtc]);
+                END
+                """);
+
+            migrationBuilder.Sql(
+                """
+                IF NOT EXISTS (
+                    SELECT 1
+                    FROM sys.indexes
+                    WHERE name = N'IX_ParkingTelemetry_ParkingSpotId_MeasuredAtUtc'
+                      AND object_id = OBJECT_ID(N'[ParkingTelemetry]')
+                )
+                BEGIN
+                    CREATE UNIQUE INDEX [IX_ParkingTelemetry_ParkingSpotId_MeasuredAtUtc]
+                    ON [ParkingTelemetry] ([ParkingSpotId], [MeasuredAtUtc]);
+                END
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropTable(
-                name: "ParkingTelemetry");
+            migrationBuilder.Sql(
+                """
+                IF OBJECT_ID(N'[ParkingTelemetry]', N'U') IS NOT NULL
+                BEGIN
+                    DROP TABLE [ParkingTelemetry];
+                END
+                """);
 
-            migrationBuilder.DropTable(
-                name: "ParkingSpots");
+            migrationBuilder.Sql(
+                """
+                IF OBJECT_ID(N'[ParkingSpots]', N'U') IS NOT NULL
+                BEGIN
+                    DROP TABLE [ParkingSpots];
+                END
+                """);
         }
     }
 }

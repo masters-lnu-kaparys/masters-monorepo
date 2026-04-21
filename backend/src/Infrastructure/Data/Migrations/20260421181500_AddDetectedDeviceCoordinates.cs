@@ -10,29 +10,45 @@ namespace Masters.Api.Infrastructure.Data.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<double>(
-                name: "LastLatitude",
-                table: "DetectedDevices",
-                type: "float",
-                nullable: true);
+            migrationBuilder.Sql(
+                """
+                IF COL_LENGTH(N'[DetectedDevices]', N'LastLatitude') IS NULL
+                BEGIN
+                    ALTER TABLE [DetectedDevices]
+                    ADD [LastLatitude] float NULL;
+                END
+                """);
 
-            migrationBuilder.AddColumn<double>(
-                name: "LastLongitude",
-                table: "DetectedDevices",
-                type: "float",
-                nullable: true);
+            migrationBuilder.Sql(
+                """
+                IF COL_LENGTH(N'[DetectedDevices]', N'LastLongitude') IS NULL
+                BEGIN
+                    ALTER TABLE [DetectedDevices]
+                    ADD [LastLongitude] float NULL;
+                END
+                """);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.DropColumn(
-                name: "LastLatitude",
-                table: "DetectedDevices");
+            migrationBuilder.Sql(
+                """
+                IF COL_LENGTH(N'[DetectedDevices]', N'LastLatitude') IS NOT NULL
+                BEGIN
+                    ALTER TABLE [DetectedDevices]
+                    DROP COLUMN [LastLatitude];
+                END
+                """);
 
-            migrationBuilder.DropColumn(
-                name: "LastLongitude",
-                table: "DetectedDevices");
+            migrationBuilder.Sql(
+                """
+                IF COL_LENGTH(N'[DetectedDevices]', N'LastLongitude') IS NOT NULL
+                BEGIN
+                    ALTER TABLE [DetectedDevices]
+                    DROP COLUMN [LastLongitude];
+                END
+                """);
         }
     }
 }
