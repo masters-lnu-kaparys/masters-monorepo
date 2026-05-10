@@ -101,6 +101,8 @@ export type AdminParkingSpot = {
   sourceKind: SpotSourceKind;
   occupied: boolean;
   distanceCm: number | null;
+  lastLatitude: number | null;
+  lastLongitude: number | null;
   lastTelemetryAtUtc: string | null;
 };
 
@@ -140,4 +142,26 @@ export type UpsertParkingSpotInput = {
   displayName: string;
   sourceKind: SpotSourceKind;
   deviceId: string | null;
+};
+
+export const DEVICE_COMMAND = {
+  PING: 1,
+  MEASURE_NOW: 2,
+  SET_THRESHOLDS: 3,
+  REBOOT: 4,
+} as const;
+
+export type DeviceCommandType = (typeof DEVICE_COMMAND)[keyof typeof DEVICE_COMMAND];
+
+export type SendDeviceCommandInput = {
+  commandType: DeviceCommandType;
+  occupiedBelowCm: number | null;
+  freeAboveCm: number | null;
+};
+
+export type DeviceCommandResult = {
+  deviceId: string;
+  statusCode: number;
+  responsePayload: string;
+  processedAtUtc: string;
 };

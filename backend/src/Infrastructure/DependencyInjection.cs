@@ -3,6 +3,7 @@ using Masters.Api.Infrastructure.Data;
 using Masters.Api.Infrastructure.Data.Interceptors;
 using Masters.Api.Infrastructure.Localization;
 using Masters.Api.Infrastructure.Options;
+using Masters.Api.Infrastructure.Services.DeviceCommands;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -19,6 +20,7 @@ public static class DependencyInjection
 
         builder.Services.Configure<DemoMapOptions>(builder.Configuration.GetSection(DemoMapOptions.SectionName));
         builder.Services.Configure<DemoTopologyOptions>(builder.Configuration.GetSection(DemoTopologyOptions.SectionName));
+        builder.Services.Configure<IoTHubDeviceCommandsOptions>(builder.Configuration.GetSection(IoTHubDeviceCommandsOptions.SectionName));
 
         builder.Services.AddScoped<ISaveChangesInterceptor, AuditableEntityInterceptor>();
 
@@ -30,6 +32,7 @@ public static class DependencyInjection
         });
 
         builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        builder.Services.AddScoped<IDeviceCommandDispatcher, IoTHubDeviceCommandDispatcher>();
         builder.Services.AddSingleton<IApplicationText, ApplicationText>();
         builder.Services.AddScoped<ApplicationDbContextInitialiser>();
         builder.Services.AddSingleton(TimeProvider.System);

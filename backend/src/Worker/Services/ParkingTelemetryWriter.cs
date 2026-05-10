@@ -110,6 +110,12 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
 
         spot.IsOccupied = message.Occupied;
         spot.LastDistanceCm = message.DistanceCm;
+        if (message.Latitude is not null && message.Longitude is not null)
+        {
+            spot.LastLatitude = message.Latitude;
+            spot.LastLongitude = message.Longitude;
+        }
+
         spot.LastTelemetryAtUtc = message.MeasuredAtUtc;
 
         _dbContext.ParkingTelemetries.Add(new ParkingTelemetry

@@ -39,6 +39,8 @@ public sealed class GetAdminParkingLotsQueryHandler : IRequestHandler<GetAdminPa
                         spot.SourceKind,
                         spot.IsOccupied,
                         spot.LastDistanceCm,
+                        spot.LastLatitude,
+                        spot.LastLongitude,
                         spot.LastTelemetryAtUtc))
                     .ToList()
             })

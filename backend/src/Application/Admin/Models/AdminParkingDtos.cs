@@ -9,6 +9,8 @@ public sealed record AdminParkingSpotDto(
     SpotSourceKind SourceKind,
     bool Occupied,
     double? DistanceCm,
+    double? LastLatitude,
+    double? LastLongitude,
     DateTimeOffset? LastTelemetryAtUtc);
 
 public sealed record AdminParkingLotListItemDto(

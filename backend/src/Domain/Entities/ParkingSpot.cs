@@ -18,6 +18,10 @@ public sealed class ParkingSpot : BaseAuditableEntity
 
     public double? LastDistanceCm { get; set; }
 
+    public double? LastLatitude { get; set; }
+
+    public double? LastLongitude { get; set; }
+
     public DateTimeOffset? LastTelemetryAtUtc { get; set; }
 
     public ICollection<ParkingTelemetry> TelemetryEntries { get; } = new List<ParkingTelemetry>();

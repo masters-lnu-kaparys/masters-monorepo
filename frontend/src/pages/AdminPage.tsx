@@ -31,18 +31,21 @@ import {
   deleteAdminLot,
   deleteAdminSpot,
   fetchAdminLots,
+  sendAdminSpotCommand,
   updateAdminLot,
   updateAdminSpot,
 } from "../api/client";
+import { AdminDeviceMap } from "../components/AdminDeviceMap";
 import { useI18n } from "../i18n/LanguageProvider";
 import type {
   AdminDetectedDevice,
   AdminParkingLot,
   AdminParkingSpot,
+  DeviceCommandType,
   SpotSourceKind,
   UpsertParkingLotInput,
 } from "../types/api";
-import { SPOT_SOURCE } from "../types/api";
+import { DEVICE_COMMAND, SPOT_SOURCE } from "../types/api";
 
 type LotDialogState =
   | { mode: "create"; open: true; value: UpsertParkingLotInput }
@@ -58,6 +61,20 @@ type DeleteDialogState =
   | { type: "lot"; id: number; label: string }
   | { type: "spot"; id: number; label: string }
   | null;
+
+type CommandDialogState =
+  | {
+      open: true;
+      spotId: number;
+      displayName: string;
+      deviceId: string;
+      value: {
+        commandType: DeviceCommandType;
+        occupiedBelowCm: string;
+        freeAboveCm: string;
+      };
+    }
+  | { open: false };
 
 const EMPTY_SPOT_FORM = {
   displayName: "",
@@ -108,6 +125,7 @@ export function AdminPage() {
   const [lotDialog, setLotDialog] = useState<LotDialogState>({ open: false });
   const [spotDialog, setSpotDialog] = useState<SpotDialogState>({ open: false });
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>(null);
+  const [commandDialog, setCommandDialog] = useState<CommandDialogState>({ open: false });
 
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
@@ -254,6 +272,38 @@ export function AdminPage() {
     }
   }, [deleteDialog, loadLots, t]);
 
+  const handleCommandSubmit = useCallback(async () => {
+    if (!commandDialog.open) {
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const payload = {
+        commandType: commandDialog.value.commandType,
+        occupiedBelowCm: commandDialog.value.commandType === DEVICE_COMMAND.SET_THRESHOLDS
+          ? Number(commandDialog.value.occupiedBelowCm)
+          : null,
+        freeAboveCm: commandDialog.value.commandType === DEVICE_COMMAND.SET_THRESHOLDS
+          ? Number(commandDialog.value.freeAboveCm)
+          : null,
+      };
+
+      const result = await sendAdminSpotCommand(commandDialog.spotId, payload);
+      setSuccessMessage(t("admin.command.success", {
+        deviceId: result.deviceId,
+        status: result.statusCode,
+      }));
+      setCommandDialog({ open: false });
+      setError(null);
+    } catch (commandError) {
+      setError(commandError instanceof Error ? commandError.message : t("admin.command.error"));
+    } finally {
+      setSaving(false);
+    }
+  }, [commandDialog, t]);
+
   const openCreateLotDialog = () => {
     setLotDialog({
       mode: "create",
@@ -315,6 +365,20 @@ export function AdminPage() {
     });
   };
 
+  const openCommandDialog = (spot: AdminParkingSpot) => {
+    setCommandDialog({
+      open: true,
+      spotId: spot.id,
+      displayName: spot.displayName,
+      deviceId: spot.deviceId,
+      value: {
+        commandType: DEVICE_COMMAND.PING,
+        occupiedBelowCm: "40",
+        freeAboveCm: "55",
+      },
+    });
+  };
+
   return (
     <Box sx={{ px: { xs: 2, md: 4 }, py: 3.5 }}>
       <Stack spacing={3}>
@@ -343,6 +407,13 @@ export function AdminPage() {
 
         {error ? <Alert severity="error">{error}</Alert> : null}
         {successMessage ? <Alert severity="success" onClose={() => setSuccessMessage(null)}>{successMessage}</Alert> : null}
+
+        <AdminDeviceMap
+          lots={lots}
+          detectedDevices={detectedDevices}
+          selectedLotId={selectedLotId}
+          locale={locale}
+        />
 
         {detectedDevices.length > 0 ? (
           <Paper sx={{ p: 2.5, borderRadius: 4, border: "1px solid rgba(214, 129, 4, 0.18)", bgcolor: "rgba(255, 248, 238, 0.92)" }}>
@@ -583,12 +654,25 @@ export function AdminPage() {
                               <Typography variant="caption" color="text.secondary">
                                 {t("common.lastMeasurement")}: {spot.distanceCm !== null ? t("common.distanceCm", { value: formatWholeNumber(spot.distanceCm) }) : t("common.noDataYet")}
                               </Typography>
+                              {spot.lastLatitude !== null && spot.lastLongitude !== null ? (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                                  {t("common.coordinates", {
+                                    latitude: spot.lastLatitude.toFixed(5),
+                                    longitude: spot.lastLongitude.toFixed(5),
+                                  })}
+                                </Typography>
+                              ) : null}
                               <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
                                 {t("common.updatedAt")}: {formatLastUpdate(spot.lastTelemetryAtUtc, locale, t)}
                               </Typography>
                             </Box>
 
                             <Stack direction="row" spacing={1} alignItems="flex-start">
+                              {spot.sourceKind === SPOT_SOURCE.REAL ? (
+                                <Button size="small" variant="outlined" onClick={() => openCommandDialog(spot)}>
+                                  {t("admin.command.open")}
+                                </Button>
+                              ) : null}
                               <Button size="small" startIcon={<EditRoundedIcon />} onClick={() => openEditSpotDialog(selectedLot.id, spot)}>
                                 {t("common.edit")}
                               </Button>
@@ -737,6 +821,81 @@ export function AdminPage() {
           <Button onClick={() => setDeleteDialog(null)} disabled={saving}>{t("common.cancel")}</Button>
           <Button color="error" variant="contained" onClick={() => void handleDelete()} disabled={saving}>
             {t("common.delete")}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={commandDialog.open} onClose={() => !saving && setCommandDialog({ open: false })} fullWidth maxWidth="sm">
+        <DialogTitle>{t("admin.command.title")}</DialogTitle>
+        <DialogContent>
+          {commandDialog.open ? (
+            <Stack spacing={2} sx={{ mt: 1 }}>
+              <Alert severity="info">
+                {t("admin.command.target", {
+                  spot: commandDialog.displayName,
+                  deviceId: commandDialog.deviceId,
+                })}
+              </Alert>
+
+              <FormControl fullWidth>
+                <InputLabel id="device-command-label">{t("admin.command.field.type")}</InputLabel>
+                <Select
+                  labelId="device-command-label"
+                  label={t("admin.command.field.type")}
+                  value={commandDialog.value.commandType}
+                  onChange={(event) => setCommandDialog((current) => current.open ? {
+                    ...current,
+                    value: {
+                      ...current.value,
+                      commandType: Number(event.target.value) as DeviceCommandType,
+                    },
+                  } : current)}
+                >
+                  <MenuItem value={DEVICE_COMMAND.PING}>{t("admin.command.type.ping")}</MenuItem>
+                  <MenuItem value={DEVICE_COMMAND.MEASURE_NOW}>{t("admin.command.type.measureNow")}</MenuItem>
+                  <MenuItem value={DEVICE_COMMAND.SET_THRESHOLDS}>{t("admin.command.type.setThresholds")}</MenuItem>
+                  <MenuItem value={DEVICE_COMMAND.REBOOT}>{t("admin.command.type.reboot")}</MenuItem>
+                </Select>
+                <FormHelperText>{t("admin.command.field.typeHelp")}</FormHelperText>
+              </FormControl>
+
+              {commandDialog.value.commandType === DEVICE_COMMAND.SET_THRESHOLDS ? (
+                <Stack direction={{ xs: "column", md: "row" }} spacing={2}>
+                  <TextField
+                    label={t("admin.command.field.occupiedBelow")}
+                    type="number"
+                    value={commandDialog.value.occupiedBelowCm}
+                    onChange={(event) => setCommandDialog((current) => current.open ? {
+                      ...current,
+                      value: {
+                        ...current.value,
+                        occupiedBelowCm: event.target.value,
+                      },
+                    } : current)}
+                    fullWidth
+                  />
+                  <TextField
+                    label={t("admin.command.field.freeAbove")}
+                    type="number"
+                    value={commandDialog.value.freeAboveCm}
+                    onChange={(event) => setCommandDialog((current) => current.open ? {
+                      ...current,
+                      value: {
+                        ...current.value,
+                        freeAboveCm: event.target.value,
+                      },
+                    } : current)}
+                    fullWidth
+                  />
+                </Stack>
+              ) : null}
+            </Stack>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setCommandDialog({ open: false })} disabled={saving}>{t("common.cancel")}</Button>
+          <Button variant="contained" onClick={() => void handleCommandSubmit()} disabled={saving}>
+            {t("admin.command.send")}
           </Button>
         </DialogActions>
       </Dialog>

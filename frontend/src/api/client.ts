@@ -1,7 +1,9 @@
 import type {
   AdminDetectedDevice,
+  DeviceCommandResult,
   AdminParkingLot,
   MapOverview,
+  SendDeviceCommandInput,
   SpotHistory,
   UpsertParkingLotInput,
   UpsertParkingSpotInput,
@@ -74,4 +76,11 @@ export async function updateAdminSpot(spotId: number, input: UpsertParkingSpotIn
 
 export async function deleteAdminSpot(spotId: number): Promise<void> {
   await deleteJson(`/api/admin/spots/${spotId}`);
+}
+
+export async function sendAdminSpotCommand(
+  spotId: number,
+  input: SendDeviceCommandInput,
+): Promise<DeviceCommandResult> {
+  return postJson<DeviceCommandResult, SendDeviceCommandInput>(`/api/admin/spots/${spotId}/commands`, input);
 }

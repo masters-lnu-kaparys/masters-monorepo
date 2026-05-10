@@ -2,6 +2,8 @@ using Masters.Api.Application.Admin.Commands.CreateParkingLot;
 using Masters.Api.Application.Admin.Commands.CreateParkingSpot;
 using Masters.Api.Application.Admin.Commands.DeleteParkingLot;
 using Masters.Api.Application.Admin.Commands.DeleteParkingSpot;
+using Masters.Api.Application.Admin.Commands.SendDeviceCommand;
+using Masters.Api.Application.Admin.Models;
 using Masters.Api.Application.Admin.Queries.GetAdminDetectedDevices;
 using Masters.Api.Application.Admin.Queries.GetAdminParkingLots;
 using Masters.Api.Application.Admin.Commands.UpdateParkingLot;
@@ -27,6 +29,7 @@ public sealed class Admin : EndpointGroupBase
         groupBuilder.MapPost(CreateSpot, "lots/{lotId:long}/spots");
         groupBuilder.MapPut(UpdateSpot, "spots/{spotId:long}");
         groupBuilder.MapDelete(DeleteSpot, "spots/{spotId:long}");
+        groupBuilder.MapPost(SendDeviceCommand, "spots/{spotId:long}/commands");
     }
 
     private static Task<List<Application.Admin.Models.AdminParkingLotListItemDto>> GetLots(
@@ -131,6 +134,21 @@ public sealed class Admin : EndpointGroupBase
         return TypedResults.NoContent();
     }
 
+    private static Task<DeviceCommandResultDto> SendDeviceCommand(
+        long spotId,
+        SendDeviceCommandRequest request,
+        ISender sender,
+        CancellationToken cancellationToken)
+    {
+        return sender.Send(
+            new SendDeviceCommandCommand(
+                spotId,
+                request.CommandType,
+                request.OccupiedBelowCm,
+                request.FreeAboveCm),
+            cancellationToken);
+    }
+
     private sealed record CreateParkingLotRequest(
         string Name,
         string City,
@@ -149,4 +167,9 @@ public sealed class Admin : EndpointGroupBase
         string DisplayName,
         SpotSourceKind SourceKind,
         string? DeviceId);
+
+    private sealed record SendDeviceCommandRequest(
+        DeviceCommandType CommandType,
+        double? OccupiedBelowCm,
+        double? FreeAboveCm);
 }
