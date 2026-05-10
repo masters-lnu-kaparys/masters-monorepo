@@ -31,8 +31,8 @@ static const char* MQTT_API_VERSION = "2021-04-12";
 #define TRIG_PIN 5
 #define ECHO_PIN 18
 
-const float OCCUPIED_BELOW_CM = 40.0;
-const float FREE_ABOVE_CM = 55.0;
+float occupiedBelowCm = 40.0f;
+float freeAboveCm = 55.0f;
 bool occupied = false;
 
 const uint32_t SEND_EVERY_MS = 5000;
@@ -235,6 +235,196 @@ static float readDistanceCmAvg(int n = 5) {
   return ok == 0 ? -1.0 : (sum / ok);
 }
 
+static void updateOccupiedState(float cm) {
+  if (!occupied && cm < occupiedBelowCm) occupied = true;
+  if (occupied && cm > freeAboveCm) occupied = false;
+}
+
+static String buildTelemetryPayload(float cm) {
+  uint64_t now = getEpochTime();
+
+  String payload =
+    String("{") +
+    "\"deviceId\":\"" + String(DEVICE_ID) + "\"," +
+    "\"ts\":" + String((unsigned long)now) + "," +
+    "\"distanceCm\":" + String(cm, 1) + "," +
+    "\"occupied\":" + String(occupied ? "true" : "false");
+
+  if (SEND_DEVICE_LOCATION) {
+    payload +=
+      String(",\"latitude\":") + String(DEVICE_LATITUDE, 6) +
+      ",\"longitude\":" + String(DEVICE_LONGITUDE, 6);
+  }
+
+  payload += "}";
+  return payload;
+}
+
+static bool publishTelemetry(float cm) {
+  String topic = "devices/" + String(DEVICE_ID) + "/messages/events/?$ct=application%2Fjson&$ce=utf-8";
+  String payload = buildTelemetryPayload(cm);
+  bool pubOk = mqtt.publish(topic.c_str(), payload.c_str());
+
+  Serial.print("Publish ");
+  Serial.print(pubOk ? "OK" : "FAIL");
+  Serial.print(" | ");
+  Serial.println(payload);
+
+  return pubOk;
+}
+
+static bool tryReadJsonNumber(const String& json, const char* fieldName, float& value) {
+  String marker = String("\"") + fieldName + "\"";
+  int markerIndex = json.indexOf(marker);
+  if (markerIndex < 0) return false;
+
+  int colonIndex = json.indexOf(':', markerIndex + marker.length());
+  if (colonIndex < 0) return false;
+
+  int start = colonIndex + 1;
+  while (start < json.length() && isspace((unsigned char)json[start])) start++;
+
+  int end = start;
+  while (end < json.length()) {
+    char c = json[end];
+    if ((c >= '0' && c <= '9') || c == '-' || c == '+' || c == '.') {
+      end++;
+      continue;
+    }
+    break;
+  }
+
+  if (end <= start) return false;
+
+  value = json.substring(start, end).toFloat();
+  return true;
+}
+
+static String extractMethodRequestId(const String& topic) {
+  int ridIndex = topic.indexOf("$rid=");
+  if (ridIndex < 0) return "";
+
+  String requestId = topic.substring(ridIndex + 5);
+  int ampIndex = requestId.indexOf('&');
+  if (ampIndex >= 0) {
+    requestId = requestId.substring(0, ampIndex);
+  }
+
+  return requestId;
+}
+
+static String extractMethodName(const String& topic) {
+  const String prefix = "$iothub/methods/POST/";
+  if (!topic.startsWith(prefix)) return "";
+
+  int start = prefix.length();
+  int end = topic.indexOf('/', start);
+  if (end < 0) return "";
+
+  return topic.substring(start, end);
+}
+
+static void publishMethodResponse(int statusCode, const String& requestId, const String& payload) {
+  String responseTopic = "$iothub/methods/res/" + String(statusCode) + "/?$rid=" + requestId;
+  bool ok = mqtt.publish(responseTopic.c_str(), payload.c_str());
+
+  Serial.print("Method response ");
+  Serial.print(ok ? "OK" : "FAIL");
+  Serial.print(" | topic=");
+  Serial.print(responseTopic);
+  Serial.print(" | payload=");
+  Serial.println(payload);
+}
+
+static void handleDeviceMethod(const String& methodName, const String& requestId, const String& payload) {
+  if (methodName == "ping") {
+    publishMethodResponse(
+      200,
+      requestId,
+      String("{\"ok\":true,\"message\":\"pong\",\"deviceId\":\"") + DEVICE_ID + "\"}");
+    return;
+  }
+
+  if (methodName == "measureNow") {
+    float cm = readDistanceCmAvg(5);
+    if (cm < 0) {
+      publishMethodResponse(500, requestId, "{\"ok\":false,\"message\":\"measurement_failed\"}");
+      return;
+    }
+
+    updateOccupiedState(cm);
+    publishTelemetry(cm);
+    lastSend = millis();
+    publishMethodResponse(
+      200,
+      requestId,
+      String("{\"ok\":true,\"distanceCm\":") + String(cm, 1) +
+      ",\"occupied\":" + String(occupied ? "true" : "false") + "}");
+    return;
+  }
+
+  if (methodName == "setThresholds") {
+    float nextOccupiedBelowCm = occupiedBelowCm;
+    float nextFreeAboveCm = freeAboveCm;
+
+    bool hasOccupiedBelow = tryReadJsonNumber(payload, "occupiedBelowCm", nextOccupiedBelowCm);
+    bool hasFreeAbove = tryReadJsonNumber(payload, "freeAboveCm", nextFreeAboveCm);
+
+    if (!hasOccupiedBelow || !hasFreeAbove || nextOccupiedBelowCm <= 0 || nextFreeAboveCm <= nextOccupiedBelowCm) {
+      publishMethodResponse(400, requestId, "{\"ok\":false,\"message\":\"invalid_thresholds\"}");
+      return;
+    }
+
+    occupiedBelowCm = nextOccupiedBelowCm;
+    freeAboveCm = nextFreeAboveCm;
+
+    publishMethodResponse(
+      200,
+      requestId,
+      String("{\"ok\":true,\"occupiedBelowCm\":") + String(occupiedBelowCm, 1) +
+      ",\"freeAboveCm\":" + String(freeAboveCm, 1) + "}");
+    return;
+  }
+
+  if (methodName == "reboot") {
+    publishMethodResponse(200, requestId, "{\"ok\":true,\"message\":\"restarting\"}");
+    delay(250);
+    ESP.restart();
+    return;
+  }
+
+  publishMethodResponse(404, requestId, "{\"ok\":false,\"message\":\"unknown_method\"}");
+}
+
+static void onMqttMessage(char* topic, byte* payload, unsigned int length) {
+  String topicText = String(topic);
+  String payloadText;
+  payloadText.reserve(length);
+
+  for (unsigned int i = 0; i < length; i++) {
+    payloadText += (char)payload[i];
+  }
+
+  Serial.print("MQTT inbound | topic=");
+  Serial.print(topicText);
+  Serial.print(" | payload=");
+  Serial.println(payloadText);
+
+  if (!topicText.startsWith("$iothub/methods/POST/")) {
+    return;
+  }
+
+  String methodName = extractMethodName(topicText);
+  String requestId = extractMethodRequestId(topicText);
+
+  if (methodName.length() == 0 || requestId.length() == 0) {
+    Serial.println("Unable to parse direct method topic");
+    return;
+  }
+
+  handleDeviceMethod(methodName, requestId, payloadText);
+}
+
 // =======================
 // 5) MQTT CONNECT
 // =======================
@@ -287,6 +477,9 @@ static bool ensureMqttConnected() {
   }
 
   Serial.println("MQTT connected");
+  bool subOk = mqtt.subscribe("$iothub/methods/POST/#");
+  Serial.print("Direct methods subscribe ");
+  Serial.println(subOk ? "OK" : "FAIL");
   return true;
 }
 
@@ -319,6 +512,7 @@ void setup() {
   Serial.println("TLS: CA cert set (secure mode)");
 
   mqtt.setServer(IOT_HUB_HOSTNAME, MQTT_PORT);
+  mqtt.setCallback(onMqttMessage);
 
   mqtt.setBufferSize(2048);
   Serial.print("MQTT buffer size = ");
@@ -342,36 +536,12 @@ void loop() {
     return;
   }
 
-  if (!occupied && cm < OCCUPIED_BELOW_CM) occupied = true;
-  if (occupied && cm > FREE_ABOVE_CM) occupied = false;
+  updateOccupiedState(cm);
 
   if (!ensureMqttConnected()) {
     delay(500);
     return;
   }
 
-  String topic = "devices/" + String(DEVICE_ID) + "/messages/events/?$ct=application%2Fjson&$ce=utf-8";
-
-  uint64_t now = getEpochTime();
-  String payload =
-    String("{") +
-    "\"deviceId\":\"" + String(DEVICE_ID) + "\"," +
-    "\"ts\":" + String((unsigned long)now) + "," +
-    "\"distanceCm\":" + String(cm, 1) + "," +
-    "\"occupied\":" + String(occupied ? "true" : "false");
-
-  if (SEND_DEVICE_LOCATION) {
-    payload +=
-      String(",\"latitude\":") + String(DEVICE_LATITUDE, 6) +
-      ",\"longitude\":" + String(DEVICE_LONGITUDE, 6);
-  }
-
-  payload +=
-    "}";
-
-  bool pubOk = mqtt.publish(topic.c_str(), payload.c_str());
-  Serial.print("Publish ");
-  Serial.print(pubOk ? "OK" : "FAIL");
-  Serial.print(" | ");
-  Serial.println(payload);
+  publishTelemetry(cm);
 }

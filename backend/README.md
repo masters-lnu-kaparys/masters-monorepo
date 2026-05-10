@@ -65,6 +65,8 @@ Main auth config keys:
 - `Auth0:Domain`
 - `Auth0:Audience`
 - `Auth0:RolesClaimType`
+- `IoTHubDeviceCommands:Enabled`
+- `IoTHubDeviceCommands:ConnectionString`
 
 The API expects Auth0 access tokens and reads roles from the namespaced claim `https://masters.api/roles`.
 
@@ -161,6 +163,24 @@ Expected real device payload:
 
 `latitude` and `longitude` are optional, but if they are present the worker can automatically link a new real device to the nearest parking lot inside the configured `DeviceBinding:MaxParkingLotDistanceKm` radius.
 
+## Device commands
+
+The admin panel can send commands to real devices through Azure IoT Hub direct methods.
+
+Supported commands:
+
+- `ping`
+- `measureNow`
+- `setThresholds`
+- `reboot`
+
+To enable command delivery in the Web API, configure:
+
+- `IoTHubDeviceCommands:Enabled=true`
+- `IoTHubDeviceCommands:ConnectionString=<IoT Hub service connection string>`
+
+The connection string must have permission to invoke direct methods on devices.
+
 ## Run Frontend
 
 ```powershell
@@ -200,6 +220,7 @@ Required frontend env vars:
 - `POST /api/admin/lots/{lotId}/spots`
 - `PUT /api/admin/spots/{spotId}`
 - `DELETE /api/admin/spots/{spotId}`
+- `POST /api/admin/spots/{spotId}/commands`
 - `SignalR hub: /hubs/parking`
 - SignalR event: `mapSnapshot`
 
