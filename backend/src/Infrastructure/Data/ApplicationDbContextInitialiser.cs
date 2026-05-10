@@ -25,6 +25,7 @@ public class ApplicationDbContextInitialiser
 {
     private const string InitialParkingMonitoringMigrationId = "20260302204719_AddParkingMonitoringSchema";
     private const string ParkingLotsMigrationId = "20260405112416_AddParkingLotsAndSpotSources";
+    private const string ParkingSpotCoordinatesMigrationId = "20260421203000_AddParkingSpotCoordinates";
     private const string EfCoreProductVersion = "9.0.0";
 
     private readonly ILogger<ApplicationDbContextInitialiser> _logger;
@@ -55,6 +56,7 @@ public class ApplicationDbContextInitialiser
 
             await EnsureMigrationHistoryForExistingSchemaAsync();
             await _context.Database.MigrateAsync();
+            await EnsureParkingSpotCoordinateColumnsAsync();
             await SeedDemoTopologyAsync();
         }
         catch (Exception ex)
@@ -179,6 +181,14 @@ public class ApplicationDbContextInitialiser
                 "Marked migration {MigrationId} as applied for an existing parking lot schema.",
                 ParkingLotsMigrationId);
         }
+
+        if (await HasParkingSpotCoordinateSchemaAsync())
+        {
+            await InsertMigrationHistoryRecordAsync(ParkingSpotCoordinatesMigrationId);
+            _logger.LogInformation(
+                "Marked migration {MigrationId} as applied for an existing parking spot coordinate schema.",
+                ParkingSpotCoordinatesMigrationId);
+        }
     }
 
     private async Task<bool> HasInitialParkingMonitoringSchemaAsync()
@@ -192,6 +202,39 @@ public class ApplicationDbContextInitialiser
         return await TableExistsAsync("ParkingLots")
             && await ColumnExistsAsync("ParkingSpots", "ParkingLotId")
             && await ColumnExistsAsync("ParkingSpots", "SourceKind");
+    }
+
+    private async Task<bool> HasParkingSpotCoordinateSchemaAsync()
+    {
+        return await TableExistsAsync("ParkingSpots")
+            && await ColumnExistsAsync("ParkingSpots", "LastLatitude")
+            && await ColumnExistsAsync("ParkingSpots", "LastLongitude");
+    }
+
+    private async Task EnsureParkingSpotCoordinateColumnsAsync()
+    {
+        if (!await TableExistsAsync("ParkingSpots"))
+        {
+            return;
+        }
+
+        if (!await ColumnExistsAsync("ParkingSpots", "LastLatitude"))
+        {
+            await ExecuteNonQueryAsync(
+                """
+                ALTER TABLE [ParkingSpots]
+                ADD [LastLatitude] float NULL;
+                """);
+        }
+
+        if (!await ColumnExistsAsync("ParkingSpots", "LastLongitude"))
+        {
+            await ExecuteNonQueryAsync(
+                """
+                ALTER TABLE [ParkingSpots]
+                ADD [LastLongitude] float NULL;
+                """);
+        }
     }
 
     private async Task<bool> TableExistsAsync(string tableName)

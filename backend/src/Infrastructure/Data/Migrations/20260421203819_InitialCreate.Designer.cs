@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Masters.Api.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260405112416_AddParkingLotsAndSpotSources")]
-    partial class AddParkingLotsAndSpotSources
+    [Migration("20260421203819_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,62 @@ namespace Masters.Api.Infrastructure.Data.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
+
+            modelBuilder.Entity("Masters.Api.Domain.Entities.DetectedDevice", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("Created")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("DeviceId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("nvarchar(128)");
+
+                    b.Property<DateTimeOffset>("FirstSeenAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<double>("LastDistanceCm")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("LastLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("LastLongitude")
+                        .HasColumnType("float");
+
+                    b.Property<DateTimeOffset>("LastMeasuredAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<DateTimeOffset>("LastModified")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("LastModifiedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("LastOccupied")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTimeOffset>("LastSeenAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId")
+                        .IsUnique();
+
+                    b.HasIndex("LastSeenAtUtc");
+
+                    b.ToTable("DetectedDevices", (string)null);
+                });
 
             modelBuilder.Entity("Masters.Api.Domain.Entities.ParkingLot", b =>
                 {
@@ -102,6 +158,12 @@ namespace Masters.Api.Infrastructure.Data.Migrations
                         .HasColumnType("bit");
 
                     b.Property<double?>("LastDistanceCm")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("LastLatitude")
+                        .HasColumnType("float");
+
+                    b.Property<double?>("LastLongitude")
                         .HasColumnType("float");
 
                     b.Property<DateTimeOffset>("LastModified")
