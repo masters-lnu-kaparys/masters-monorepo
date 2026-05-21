@@ -9,11 +9,11 @@
 // =======================
 // 1) НАЛАШТУВАННЯ
 // =======================
-const char* WIFI_SSID = "stalker";
-const char* WIFI_PASS = "09021969";
+const char* WIFI_SSID = "YOUR_WIFI_SSID";
+const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
 
-const char* IOT_HUB_HOSTNAME = "masters-kaparys.azure-devices.net";
-const char* DEVICE_ID = "ps-uzh-lot1-spot001";
+const char* IOT_HUB_HOSTNAME = "YOUR_IOT_HUB_HOSTNAME";
+const char* DEVICE_ID = "YOUR_DEVICE_ID";
 
 // Фіксовані координати місця встановлення сенсора.
 // Якщо сенсор перемістили, онови їх перед прошивкою.
@@ -21,8 +21,9 @@ const bool SEND_DEVICE_LOCATION = true;
 const double DEVICE_LATITUDE = 49.83870;
 const double DEVICE_LONGITUDE = 23.99440;
 
-// ВАЖЛИВО: сюди вставляєш "Primary key" (base64) з Azure IoT Hub -> Devices -> твій device -> Primary key
-const char* DEVICE_KEY = "zF0Ld0w7fELBOUIwnCF3Z9ytsXYZhp6d4AIoTPMfWoU=";
+// ВАЖЛИВО: сюди вставляєш "Primary key" (base64) з Azure IoT Hub -> Devices -> твій device -> Primary key.
+// Не коміть реальний ключ у публічний репозиторій.
+const char* DEVICE_KEY = "YOUR_DEVICE_PRIMARY_KEY";
 
 // MQTT
 static const int MQTT_PORT = 8883;
