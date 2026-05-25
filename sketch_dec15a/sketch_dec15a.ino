@@ -15,17 +15,12 @@ const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
 const char* IOT_HUB_HOSTNAME = "YOUR_IOT_HUB_HOSTNAME";
 const char* DEVICE_ID = "YOUR_DEVICE_ID";
 
-// Фіксовані координати місця встановлення сенсора.
-// Якщо сенсор перемістили, онови їх перед прошивкою.
 const bool SEND_DEVICE_LOCATION = true;
 const double DEVICE_LATITUDE = 49.83870;
 const double DEVICE_LONGITUDE = 23.99440;
 
-// ВАЖЛИВО: сюди вставляєш "Primary key" (base64) з Azure IoT Hub -> Devices -> твій device -> Primary key.
-// Не коміть реальний ключ у публічний репозиторій.
 const char* DEVICE_KEY = "YOUR_DEVICE_PRIMARY_KEY";
 
-// MQTT
 static const int MQTT_PORT = 8883;
 static const char* MQTT_API_VERSION = "2021-04-12";
 
@@ -38,7 +33,6 @@ bool occupied = false;
 
 const uint32_t SEND_EVERY_MS = 5000;
 
-// SAS token
 const uint32_t SAS_TTL_SECS = 3600;
 const uint32_t SAS_REFRESH_BEFORE_SECS = 300;
 
@@ -441,7 +435,6 @@ static void printTlsLastError() {
 static bool ensureMqttConnected() {
   if (mqtt.connected()) return true;
 
-  // DNS check (дуже корисно для діагностики rc=-2)
   IPAddress ip;
   if (WiFi.hostByName(IOT_HUB_HOSTNAME, ip)) {
     Serial.print("IoT Hub IP: ");
@@ -509,7 +502,7 @@ void setup() {
 
   tlsClient.setCACert(AZURE_IOTHUB_CA_CHAIN_PEM);
   tlsClient.setTimeout(15000);
-  tlsClient.setHandshakeTimeout(30); // сек
+  tlsClient.setHandshakeTimeout(30);
   Serial.println("TLS: CA cert set (secure mode)");
 
   mqtt.setServer(IOT_HUB_HOSTNAME, MQTT_PORT);

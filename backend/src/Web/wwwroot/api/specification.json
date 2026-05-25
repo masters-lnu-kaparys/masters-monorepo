@@ -288,6 +288,55 @@
         ]
       }
     },
+    "/api/admin/spots/{spotId}/commands": {
+      "post": {
+        "tags": [
+          "admin"
+        ],
+        "operationId": "SendDeviceCommand",
+        "parameters": [
+          {
+            "name": "spotId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "x-position": 1
+          }
+        ],
+        "requestBody": {
+          "x-name": "request",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendDeviceCommandRequest"
+              }
+            }
+          },
+          "required": true,
+          "x-position": 2
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceCommandResultDto"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "Bearer": []
+          }
+        ]
+      }
+    },
     "/api/dashboard/summary": {
       "get": {
         "tags": [
@@ -677,6 +726,61 @@
             "nullable": true
           }
         }
+      },
+      "DeviceCommandResultDto": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "deviceId": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "responsePayload": {
+            "type": "string"
+          },
+          "processedAtUtc": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SendDeviceCommandRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "commandType": {
+            "$ref": "#/components/schemas/DeviceCommandType"
+          },
+          "occupiedBelowCm": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "freeAboveCm": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          }
+        }
+      },
+      "DeviceCommandType": {
+        "type": "integer",
+        "description": "",
+        "x-enumNames": [
+          "Ping",
+          "MeasureNow",
+          "SetThresholds",
+          "Reboot"
+        ],
+        "enum": [
+          1,
+          2,
+          3,
+          4
+        ]
       },
       "DashboardSummaryDto": {
         "type": "object",
