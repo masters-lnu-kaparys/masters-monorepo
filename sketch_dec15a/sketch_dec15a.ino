@@ -10,6 +10,11 @@
 
 #include "mbedtls/base64.h"
 #include "mbedtls/md.h"
+#include "mbedtls/version.h"
+
+#if MBEDTLS_VERSION_MAJOR >= 4
+#include "psa/crypto.h"
+#endif
 
 // =======================
 // 1) НАЛАШТУВАННЯ
@@ -143,20 +148,32 @@ static bool base64Decode(const char* input, uint8_t* outBuf, size_t outBufSize, 
 static bool hmacSha256(const uint8_t* key, size_t keyLen,
                        const uint8_t* msg, size_t msgLen,
                        uint8_t* out, size_t outSize, size_t* outLen) {
-  const mbedtls_md_info_t* mdInfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
-  if (!mdInfo) return false;
+  constexpr size_t digestSize = 32;
+  if (outSize < digestSize) return false;
 
-  mbedtls_md_context_t ctx;
-  mbedtls_md_init(&ctx);
+#if MBEDTLS_VERSION_MAJOR >= 4
+  if (psa_crypto_init() != PSA_SUCCESS) return false;
 
-  if (mbedtls_md_setup(&ctx, mdInfo, 1) != 0) { mbedtls_md_free(&ctx); return false; }
-  if (mbedtls_md_hmac_starts(&ctx, key, keyLen) != 0) { mbedtls_md_free(&ctx); return false; }
-  if (mbedtls_md_hmac_update(&ctx, msg, msgLen) != 0) { mbedtls_md_free(&ctx); return false; }
-  if (mbedtls_md_hmac_finish(&ctx, out) != 0) { mbedtls_md_free(&ctx); return false; }
+  const psa_algorithm_t algorithm = PSA_ALG_HMAC(PSA_ALG_SHA_256);
+  psa_key_attributes_t attributes = PSA_KEY_ATTRIBUTES_INIT;
+  psa_set_key_type(&attributes, PSA_KEY_TYPE_HMAC);
+  psa_set_key_algorithm(&attributes, algorithm);
+  psa_set_key_usage_flags(&attributes, PSA_KEY_USAGE_SIGN_MESSAGE);
 
-  mbedtls_md_free(&ctx);
-  *outLen = 32;
-  return outSize >= 32;
+  mbedtls_svc_key_id_t keyId;
+  if (psa_import_key(&attributes, key, keyLen, &keyId) != PSA_SUCCESS) return false;
+
+  size_t macSize = 0;
+  const psa_status_t status = psa_mac_compute(keyId, algorithm, msg, msgLen, out, outSize, &macSize);
+  const psa_status_t cleanup = psa_destroy_key(keyId);
+  if (status != PSA_SUCCESS || cleanup != PSA_SUCCESS || macSize != digestSize) return false;
+#else
+  const auto* mdInfo = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  if (!mdInfo || mbedtls_md_hmac(mdInfo, key, keyLen, msg, msgLen, out) != 0) return false;
+#endif
+
+  *outLen = digestSize;
+  return true;
 }
 
 static uint64_t getEpochTime() {

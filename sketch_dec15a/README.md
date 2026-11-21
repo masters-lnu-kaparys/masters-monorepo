@@ -1,6 +1,6 @@
 # Прошивка ESP32 для моніторингу паркомісця
 
-Прошивку зібрано з Arduino CLI 1.5.1 для `esp32:esp32:esp32`, пакета Arduino-ESP32 2.0.17 і бібліотеки PubSubClient 2.8.0.
+Збірку для `esp32:esp32:esp32` перевірено з Arduino CLI 1.5.1, пакетами Arduino-ESP32 2.0.17 і 4.0.0 та бібліотекою PubSubClient 2.8.0.
 
 ## Налаштування та збірка
 
@@ -10,7 +10,7 @@
 
 `PARKING_BAY_ID` задає сталий числовий ідентифікатор паркомісця для вибору таблиці. `PARKING_TIME_ZONE` задає місцевий час для вибору частини доби. Типове налаштування відповідає часовому поясу Львова. [База часових поясів IANA](https://data.iana.org/time-zones/tzdb/europe)
 
-Команди виконуються з кореня репозиторію.
+В Arduino IDE виберіть плату `ESP32 Dev Module`. Команди з прикладу виконуються з кореня репозиторію та використовують версію пакета 2.0.17.
 
 ```powershell
 arduino-cli core update-index --additional-urls https://espressif.github.io/arduino-esp32/package_esp32_index.json
