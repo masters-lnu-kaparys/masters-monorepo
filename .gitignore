@@ -4,6 +4,7 @@
 **/objtemp/
 /sketch_dec15a/device_secrets.h
 /.codex-work/
+/.research-data/
 /.playwright-mcp/
 /docs/delivery/*.pdf
 __pycache__/

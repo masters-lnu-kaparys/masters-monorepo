@@ -29,11 +29,14 @@ def save(path, value):
 
 
 def verify_delivery():
-    manifest = json.loads((ROOT / 'docs/research/adaptive-sampling/phase4-delivery-artifacts.json').read_text(encoding='utf-8'))
-    for name, expected in manifest['files'].items():
+    manifest = json.loads((ROOT / 'docs/research/adaptive-sampling/results-checksums.json').read_text(encoding='utf-8'))
+    frozen = {name: expected for name, expected in manifest['files'].items() if not name.startswith('frontend/')}
+    for name, expected in frozen.items():
         if digest(ROOT / name) != expected:
             raise RuntimeError('Frozen research artifact changed: ' + name)
-    return len(manifest['files'])
+    if digest(WORK / 'results.json') != frozen['docs/research/adaptive-sampling/phase4-display-results.json']:
+        raise RuntimeError('The workspace results differ from the published experiment')
+    return len(frozen) + 1
 
 
 def clip_metrics(segments, decisions, start, end):

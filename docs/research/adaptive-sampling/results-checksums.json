@@ -1,0 +1,17 @@
+{
+  "algorithm": "SHA-256",
+  "files": {
+    "docs/research/adaptive-sampling/phase2-data-lock.json": "f1e2ff7e0eca9676b58c1083479310a1e8b91dcef44b3aec1a087263c8062e05",
+    "docs/research/adaptive-sampling/phase4-display-cohort.json": "4eef0f7b310248e8d2ae3539b62924f5143728f57a8182114aa401bf8ef17fee",
+    "docs/research/adaptive-sampling/phase4-display-entry-lock.json": "2665ba14e0828371d0f64bc3ff6759f4a8f213e0b3cabf2e8170a9f78d6449b0",
+    "docs/research/adaptive-sampling/phase4-display-policies.json": "7935eb5d2bedd7a011bf3f8228713340ee27a3acf14116df49fa71f8565ae901",
+    "docs/research/adaptive-sampling/phase4-display-protocol.json": "7c28b2b52ee865439e3ca9928a74acef40529f98530aaf4e8f9561864feb565a",
+    "docs/research/adaptive-sampling/phase4-display-results.csv": "80b405e0b54ea5ac9fd2797ef31b1945e4b71019a578ee57f62ebd04522bafcc",
+    "docs/research/adaptive-sampling/phase4-display-results.json": "b97bdfcf647e463b632677991b6f89e4fb20eb67e7ea783dfa3a35f539c5d42c",
+    "frontend/public/data/sampling-demo.json": "16ba030655b375156583e3a23d1c7fba96af97a13711a30cb44734cffdab5ba5",
+    "frontend/tests/fixtures/sampling-demo-golden.json": "3fcbfa1550e3094ebf6b5213a0d8953659faab742b540ef2ef9b43293118a9f2",
+    "research/parking_sampling/results/models.npz": "45eebb3c8a1fc496d047e6a05c6da0878fd405266156d0361f9f30102412743b",
+    "research/parking_sampling/results/primary_7_days.npz": "ead423c7f1972588ec40b1293864bfda060b2c873ff802948265633aacd3bbf1",
+    "research/parking_sampling/results/sensitivity_1_day.npz": "d6d5c8c0c718970968d8a38602a9d84c4163e17041771229910a968d5ee9660c"
+  }
+}

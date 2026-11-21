@@ -1,5 +1,4 @@
 # Preserve the exact bytes used by the research checksums.
-/.codex-work/** -text
 /docs/research/adaptive-sampling/** -text
 /research/parking_sampling/** -text
 /frontend/public/data/sampling-demo.json -text

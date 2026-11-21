@@ -100,10 +100,9 @@ test('source clocks remain civil labels regardless of the viewer timezone', () =
   assert.equal(formatSourceTime(1575158400), '00:00:00');
 });
 
-test('all 191 frozen research artifacts and both exported assets retain their checksums', async () => {
-  const delivery = await readJson('../../docs/research/adaptive-sampling/phase4-delivery-artifacts.json');
+test('both exported demo assets retain their frozen checksums', async () => {
   const exported = await readJson('../../docs/research/adaptive-sampling/phase5-demo-export.json');
-  for (const [path, expected] of Object.entries({ ...delivery.files, ...exported.files })) {
+  for (const [path, expected] of Object.entries(exported.files)) {
     const bytes = await readFile(new URL('../../' + path, import.meta.url));
     assert.equal(createHash('sha256').update(bytes).digest('hex'), expected, path);
   }

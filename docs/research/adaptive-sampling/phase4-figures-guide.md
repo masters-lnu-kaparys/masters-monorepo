@@ -40,4 +40,6 @@
 
 Поліпшення також нерівномірне: із 867 місць 353 мають більший особистий час помилкового «вільно», 328 - «зайнято». Обидва сукупні показники та середні з однаковою вагою місць поліпшені. Висновок стосується перевіреного компромісу для системи, а не гарантії кожному місцю.
 
-Джерело записів: [City of Melbourne, сенсорна історія 2019](https://data.melbourne.vic.gov.au/explore/dataset/on-street-car-parking-sensor-data-2019/information/), CC BY 4.0. Рисунки й обчислення власні. [Протокол](phase4-display-protocol.md), [повні результати](phase4-display-results.json), [перевірка](phase4-verification.json), [короткий текст виступу](phase4-defense-brief.md).
+Сенсорні записи опубліковано за ліцензією CC BY 4.0. [City of Melbourne, сенсорна історія 2019](https://data.melbourne.vic.gov.au/explore/dataset/on-street-car-parking-sensor-data-2019/information/).
+
+[Протокол](phase4-display-protocol.md) · [Повні результати](phase4-display-results.json) · [Відтворення](../../delivery/README.md).
