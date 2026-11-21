@@ -2,6 +2,7 @@
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <time.h>
+#include "occupancy_state.h"
 #include "sas_refresh.h"
 #include "device_secrets.h"
 
@@ -28,7 +29,7 @@ static const char* MQTT_API_VERSION = "2021-04-12";
 
 float occupiedBelowCm = 40.0f;
 float freeAboveCm = 55.0f;
-bool occupied = false;
+OccupancyState occupancy = OccupancyState::Unknown;
 
 const uint32_t SEND_EVERY_MS = 5000;
 
@@ -231,8 +232,12 @@ static float readDistanceCmAvg(int n = 5) {
 }
 
 static void updateOccupiedState(float cm) {
-  if (!occupied && cm < occupiedBelowCm) occupied = true;
-  if (occupied && cm > freeAboveCm) occupied = false;
+  occupancy = nextOccupancyState(cm, occupiedBelowCm, freeAboveCm, occupancy);
+}
+
+static const char* occupancyJson() {
+  if (occupancy == OccupancyState::Unknown) return "null";
+  return occupancy == OccupancyState::Occupied ? "true" : "false";
 }
 
 static String buildTelemetryPayload(float cm) {
@@ -243,7 +248,7 @@ static String buildTelemetryPayload(float cm) {
     "\"deviceId\":\"" + String(DEVICE_ID) + "\"," +
     "\"ts\":" + String((unsigned long)now) + "," +
     "\"distanceCm\":" + String(cm, 1) + "," +
-    "\"occupied\":" + String(occupied ? "true" : "false");
+    "\"occupied\":" + String(occupancyJson());
 
   if (SEND_DEVICE_LOCATION) {
     payload +=
@@ -256,6 +261,11 @@ static String buildTelemetryPayload(float cm) {
 }
 
 static bool publishTelemetry(float cm) {
+  if (occupancy == OccupancyState::Unknown) {
+    Serial.println("Waiting for an initial occupancy state");
+    return false;
+  }
+
   String topic = "devices/" + String(DEVICE_ID) + "/messages/events/?$ct=application%2Fjson&$ce=utf-8";
   String payload = buildTelemetryPayload(cm);
   bool pubOk = mqtt.publish(topic.c_str(), payload.c_str());
@@ -354,7 +364,7 @@ static void handleDeviceMethod(const String& methodName, const String& requestId
       200,
       requestId,
       String("{\"ok\":true,\"distanceCm\":") + String(cm, 1) +
-      ",\"occupied\":" + String(occupied ? "true" : "false") + "}");
+      ",\"occupied\":" + String(occupancyJson()) + "}");
     return;
   }
 
