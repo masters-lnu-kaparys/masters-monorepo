@@ -36,6 +36,8 @@ API доступний за адресою `https://localhost:5001`. Докум�
 
 Для приймання показів від ESP32 задайте у фоновій службі `RealtimeEventHub:Enabled`, `RealtimeEventHub:ConnectionString`, `RealtimeEventHub:EventHubName` і `RealtimeEventHub:ConsumerGroup`. Симуляцію налаштовують через `Simulation:Enabled` та `Simulation:UpdateIntervalSeconds`.
 
+Веб-API використовує `TelemetryFreshness:MaxAgeSeconds=330` для всіх місць. Це покриває максимальну паузу адаптивної прошивки 300 с і залишає 30 с на доставку.
+
 Повідомлення від пристрою містить `deviceId`, `ts`, `distanceCm` і `occupied`. За наявності координат фоновий процес може прив’язати новий пристрій до найближчої парковки в радіусі `DeviceBinding:MaxParkingLotDistanceKm`.
 
 Команди `ping`, `measureNow`, `setThresholds` і `reboot` надходять на пристрій через Azure IoT Hub. Для них задайте на сервері `IoTHubDeviceCommands:Enabled=true` і `IoTHubDeviceCommands:ConnectionString` із правом виклику методів пристроїв. [Налаштування прошивки](../sketch_dec15a/README.md)

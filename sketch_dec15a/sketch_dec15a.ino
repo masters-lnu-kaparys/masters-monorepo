@@ -2,7 +2,9 @@
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <time.h>
+#include <esp_timer.h>
 #include "occupancy_state.h"
+#include "sampling_schedule.h"
 #include "sas_refresh.h"
 #include "device_secrets.h"
 
@@ -31,7 +33,18 @@ float occupiedBelowCm = 40.0f;
 float freeAboveCm = 55.0f;
 OccupancyState occupancy = OccupancyState::Unknown;
 
-const uint32_t SEND_EVERY_MS = 5000;
+#ifndef PARKING_BAY_ID
+#define PARKING_BAY_ID 999999999UL
+#endif
+
+#ifndef PARKING_TIME_ZONE
+#define PARKING_TIME_ZONE "EET-2EEST,M3.5.0/3,M10.5.0/4"
+#endif
+
+static_assert(PARKING_BAY_ID > 0 && PARKING_BAY_ID <= UINT32_MAX,
+              "PARKING_BAY_ID must be a positive 32-bit identifier");
+
+const uint32_t MQTT_CHECK_INTERVAL_MS = 5000;
 
 const uint32_t SAS_TTL_SECS = 3600;
 const uint32_t SAS_REFRESH_BEFORE_SECS = 300;
@@ -98,7 +111,8 @@ PubSubClient mqtt(tlsClient);
 
 String sasToken;
 uint64_t sasExpiry = 0;
-uint32_t lastSend = 0;
+uint32_t lastMqttCheck = 0;
+SamplingSchedule sampling;
 
 // =======================
 // 3) УТИЛІТИ
@@ -150,8 +164,25 @@ static uint64_t getEpochTime() {
   return (uint64_t)now;
 }
 
+static uint64_t samplingTimeMs() {
+  return static_cast<uint64_t>(esp_timer_get_time()) / 1000;
+}
+
+static void selectSamplingTable() {
+  String allocationKey = String("local-risk-allocation:") + SAMPLING_ALLOCATION_SEED +
+    ":" + String(static_cast<unsigned long>(PARKING_BAY_ID));
+  const auto* sha256 = mbedtls_md_info_from_type(MBEDTLS_MD_SHA256);
+  uint8_t digest[32];
+  if (!sha256 || mbedtls_md(sha256, reinterpret_cast<const uint8_t*>(allocationKey.c_str()),
+                           allocationKey.length(), digest) != 0) {
+    Serial.println("Unable to assign a sampling table, using the first pooled table");
+    return;
+  }
+  sampling.selectTable(digest);
+}
+
 static void syncTimeNtpHard() {
-  configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+  configTzTime(PARKING_TIME_ZONE, "pool.ntp.org", "time.nist.gov");
   Serial.print("Sync time");
   while (true) {
     time_t now = time(nullptr);
@@ -240,13 +271,11 @@ static const char* occupancyJson() {
   return occupancy == OccupancyState::Occupied ? "true" : "false";
 }
 
-static String buildTelemetryPayload(float cm) {
-  uint64_t now = getEpochTime();
-
+static String buildTelemetryPayload(float cm, time_t measuredAt) {
   String payload =
     String("{") +
     "\"deviceId\":\"" + String(DEVICE_ID) + "\"," +
-    "\"ts\":" + String((unsigned long)now) + "," +
+    "\"ts\":" + String(static_cast<unsigned long>(measuredAt)) + "," +
     "\"distanceCm\":" + String(cm, 1) + "," +
     "\"occupied\":" + String(occupancyJson());
 
@@ -260,14 +289,14 @@ static String buildTelemetryPayload(float cm) {
   return payload;
 }
 
-static bool publishTelemetry(float cm) {
+static bool publishTelemetry(float cm, time_t measuredAt) {
   if (occupancy == OccupancyState::Unknown) {
     Serial.println("Waiting for an initial occupancy state");
     return false;
   }
 
   String topic = "devices/" + String(DEVICE_ID) + "/messages/events/?$ct=application%2Fjson&$ce=utf-8";
-  String payload = buildTelemetryPayload(cm);
+  String payload = buildTelemetryPayload(cm, measuredAt);
   bool pubOk = mqtt.publish(topic.c_str(), payload.c_str());
 
   Serial.print("Publish ");
@@ -276,6 +305,26 @@ static bool publishTelemetry(float cm) {
   Serial.println(payload);
 
   return pubOk;
+}
+
+static void recordMeasurement(float cm) {
+  const uint64_t measuredAtMs = samplingTimeMs();
+  const time_t measuredAt = time(nullptr);
+  updateOccupiedState(cm);
+
+  struct tm localTime;
+  uint16_t pause = SAMPLING_RETRY_SECONDS;
+  if (localtime_r(&measuredAt, &localTime)) {
+    pause = sampling.observe(occupancy, localTime.tm_hour, measuredAtMs);
+  } else {
+    sampling.retry(measuredAtMs);
+  }
+
+  if (!publishTelemetry(cm, measuredAt)) {
+    sampling.retry(samplingTimeMs());
+    pause = SAMPLING_RETRY_SECONDS;
+  }
+  Serial.printf("Next measurement in %u s\n", static_cast<unsigned int>(pause));
 }
 
 static bool tryReadJsonNumber(const String& json, const char* fieldName, float& value) {
@@ -353,13 +402,12 @@ static void handleDeviceMethod(const String& methodName, const String& requestId
   if (methodName == "measureNow") {
     float cm = readDistanceCmAvg(5);
     if (cm < 0) {
+      sampling.retry(samplingTimeMs());
       publishMethodResponse(500, requestId, "{\"ok\":false,\"message\":\"measurement_failed\"}");
       return;
     }
 
-    updateOccupiedState(cm);
-    publishTelemetry(cm);
-    lastSend = millis();
+    recordMeasurement(cm);
     publishMethodResponse(
       200,
       requestId,
@@ -382,6 +430,7 @@ static void handleDeviceMethod(const String& methodName, const String& requestId
 
     occupiedBelowCm = nextOccupiedBelowCm;
     freeAboveCm = nextFreeAboveCm;
+    sampling.resetHistory(samplingTimeMs());
 
     publishMethodResponse(
       200,
@@ -529,26 +578,24 @@ void setup() {
   mqtt.setSocketTimeout(10);
 
   syncTimeNtpHard();
+  selectSamplingTable();
 }
 
 void loop() {
+  if (millis() - lastMqttCheck >= MQTT_CHECK_INTERVAL_MS) {
+    if (WiFi.status() == WL_CONNECTED) ensureMqttConnected();
+    lastMqttCheck = millis();
+  }
   mqtt.loop();
 
-  if (millis() - lastSend < SEND_EVERY_MS) return;
-  lastSend = millis();
+  if (!sampling.isDue(samplingTimeMs())) return;
 
   float cm = readDistanceCmAvg(5);
   if (cm < 0) {
+    sampling.retry(samplingTimeMs());
     Serial.println("No echo");
     return;
   }
 
-  updateOccupiedState(cm);
-
-  if (!ensureMqttConnected()) {
-    delay(500);
-    return;
-  }
-
-  publishTelemetry(cm);
+  recordMeasurement(cm);
 }
