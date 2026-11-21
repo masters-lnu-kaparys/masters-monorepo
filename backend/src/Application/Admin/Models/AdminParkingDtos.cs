@@ -11,7 +11,8 @@ public sealed record AdminParkingSpotDto(
     double? DistanceCm,
     double? LastLatitude,
     double? LastLongitude,
-    DateTimeOffset? LastTelemetryAtUtc);
+    DateTimeOffset? LastTelemetryAtUtc,
+    string DataStatus = "missing");
 
 public sealed record AdminParkingLotListItemDto(
     long Id,
@@ -23,7 +24,8 @@ public sealed record AdminParkingLotListItemDto(
     int TotalSpots,
     int OccupiedSpots,
     int FreeSpots,
-    IReadOnlyList<AdminParkingSpotDto> Spots);
+    IReadOnlyList<AdminParkingSpotDto> Spots,
+    int UnknownSpots = 0);
 
 public sealed record AdminDetectedDeviceDto(
     string DeviceId,
@@ -33,4 +35,5 @@ public sealed record AdminDetectedDeviceDto(
     double LastDistanceCm,
     bool LastOccupied,
     double? LastLatitude,
-    double? LastLongitude);
+    double? LastLongitude,
+    string DataStatus = "missing");

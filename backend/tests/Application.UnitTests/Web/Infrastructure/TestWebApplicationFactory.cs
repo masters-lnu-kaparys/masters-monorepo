@@ -8,11 +8,15 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace Masters.Api.Application.UnitTests.Web.Infrastructure;
 
 internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
 {
+    private bool _seeded;
     private readonly string _connectionString =
         $"Server=(localdb)\\mssqllocaldb;Database=Masters.ApiDb.Testing.{Guid.NewGuid():N};Trusted_Connection=True;MultipleActiveResultSets=true";
 
@@ -23,7 +27,7 @@ internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         {
             configurationBuilder.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:Masters.ApiDb"] = _connectionString,
+                ["ConnectionStrings:DefaultConnection"] = _connectionString,
                 [$"{Auth0Options.SectionName}:Domain"] = "parking-demo.eu.auth0.com",
                 [$"{Auth0Options.SectionName}:Audience"] = "https://parking-api",
                 [$"{Auth0Options.SectionName}:RolesClaimType"] = "https://masters.api/roles",
@@ -34,6 +38,12 @@ internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         builder.ConfigureTestServices(services =>
         {
             services.RemoveAll<IHostedService>();
+            // Minimal-host startup may read its connection before configuration callbacks.
+            // Replace the provider options too, so the test DB cannot fall back to appsettings.
+            services.RemoveAll<ApplicationDbContext>();
+            services.RemoveAll<DbContextOptions<ApplicationDbContext>>();
+            services.RemoveAll<IDbContextOptionsConfiguration<ApplicationDbContext>>();
+            services.AddDbContext<ApplicationDbContext>(options => options.UseSqlServer(_connectionString));
 
             services.AddAuthentication(options =>
                 {
@@ -50,13 +60,44 @@ internal sealed class TestWebApplicationFactory : WebApplicationFactory<Program>
         using var scope = Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
+        // Never let a configuration regression turn test setup into a working DB reset.
+        ValidateOwnedConnection(dbContext.Database.GetConnectionString()!, _connectionString);
+
         await dbContext.Database.EnsureDeletedAsync();
         await dbContext.Database.EnsureCreatedAsync();
+        _seeded = true;
 
         if (entities.Length > 0)
         {
             dbContext.AddRange(entities);
             await dbContext.SaveChangesAsync();
         }
+    }
+
+    internal static void ValidateOwnedConnection(string actualConnection, string expectedConnection)
+    {
+        var actual = new SqlConnectionStringBuilder(actualConnection);
+        var expected = new SqlConnectionStringBuilder(expectedConnection);
+        if (!string.Equals(actual.DataSource, expected.DataSource, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(actual.InitialCatalog, expected.InitialCatalog, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException("Refusing to reset a database outside this test factory.");
+        }
+
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_seeded)
+            {
+                using var scope = Services.CreateScope();
+                var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+                ValidateOwnedConnection(db.Database.GetConnectionString()!, _connectionString);
+                await db.Database.EnsureDeletedAsync();
+            }
+        }
+        finally { await base.DisposeAsync(); }
     }
 }

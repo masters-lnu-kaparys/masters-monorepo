@@ -5,7 +5,8 @@ public sealed record DashboardSummaryDto(
     int OccupiedSpots,
     int FreeSpots,
     double OccupancyRate,
-    DateTimeOffset? LastTelemetryAtUtc);
+    DateTimeOffset? LastTelemetryAtUtc,
+    int UnknownSpots = 0);
 
 public sealed record SpotStateDto(
     long Id,
@@ -13,7 +14,8 @@ public sealed record SpotStateDto(
     string DisplayName,
     bool Occupied,
     double? DistanceCm,
-    DateTimeOffset? LastTelemetryAtUtc);
+    DateTimeOffset? LastTelemetryAtUtc,
+    string DataStatus = "missing");
 
 public sealed record MapCenterDto(
     double Latitude,
@@ -25,7 +27,8 @@ public sealed record MapSummaryDto(
     int OccupiedSpots,
     int FreeSpots,
     double OccupancyRate,
-    DateTimeOffset? LastUpdatedAtUtc);
+    DateTimeOffset? LastUpdatedAtUtc,
+    int UnknownSpots = 0);
 
 public sealed record ParkingLotMapDto(
     long Id,
@@ -38,7 +41,8 @@ public sealed record ParkingLotMapDto(
     int OccupiedSpots,
     int FreeSpots,
     double OccupancyRate,
-    DateTimeOffset? LastUpdatedAtUtc);
+    DateTimeOffset? LastUpdatedAtUtc,
+    int UnknownSpots = 0);
 
 public sealed record MapOverviewDto(
     MapCenterDto MapCenter,
@@ -54,7 +58,8 @@ public sealed record LotSpotStateDto(
     string DisplayName,
     bool Occupied,
     double? DistanceCm,
-    DateTimeOffset? LastUpdatedAtUtc);
+    DateTimeOffset? LastUpdatedAtUtc,
+    string DataStatus = "missing");
 
 public sealed record LotActivityDto(
     long SpotId,
@@ -76,7 +81,8 @@ public sealed record LotDetailsDto(
     double OccupancyRate,
     DateTimeOffset? LastUpdatedAtUtc,
     IReadOnlyList<LotSpotStateDto> Spots,
-    IReadOnlyList<LotActivityDto> RecentActivity);
+    IReadOnlyList<LotActivityDto> RecentActivity,
+    int UnknownSpots = 0);
 
 public sealed record SpotHistoryPointDto(
     DateTimeOffset MeasuredAtUtc,

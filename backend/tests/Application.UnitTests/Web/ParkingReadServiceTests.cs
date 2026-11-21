@@ -5,6 +5,7 @@ using Masters.Api.Infrastructure.Options;
 using Masters.Api.Web.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Masters.Api.Application.Common.Models;
 
 namespace Masters.Api.Application.UnitTests.Web;
 
@@ -148,7 +149,8 @@ public class ParkingReadServiceTests
         return new ParkingReadService(
             dbContext,
             TimeProvider.System,
-            Options.Create(new DemoMapOptions()));
+            Options.Create(new DemoMapOptions()),
+            Options.Create(new TelemetryFreshnessOptions { MaxAgeSeconds = 900 }));
     }
 
     private static async Task<ParkingLot> SeedLotAsync(ApplicationDbContext dbContext, string name, string city)
@@ -187,6 +189,37 @@ public class ParkingReadServiceTests
             LastDistanceCm = distanceCm,
             LastTelemetryAtUtc = lastTelemetryAtUtc
         };
+    }
+
+    [Test]
+    public async Task OnlyFreshMeasurementsMustContributeToAvailability()
+    {
+        await using var db = CreateDbContext();
+        var lot = await SeedLotAsync(db, "Freshness", "Test");
+        var now = new DateTimeOffset(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
+        db.ParkingSpots.AddRange(
+            CreateSpot(lot, "fresh-free", "1", false, 100, now.AddSeconds(-120), SpotSourceKind.Real),
+            CreateSpot(lot, "fresh-occupied", "2", true, 20, now, SpotSourceKind.Real),
+            CreateSpot(lot, "stale-free", "3", false, 100, now.AddSeconds(-121), SpotSourceKind.Real),
+            CreateSpot(lot, "missing", "4", false, null, null, SpotSourceKind.Real),
+            CreateSpot(lot, "future", "5", false, 100, now.AddHours(1), SpotSourceKind.Real));
+        await db.SaveChangesAsync();
+        var service = new ParkingReadService(db, new FixedClock(now), Options.Create(new DemoMapOptions()));
+        var overview = await service.GetMapOverviewAsync(CancellationToken.None);
+        overview.Summary.TotalSpots.ShouldBe(5);
+        overview.Summary.FreeSpots.ShouldBe(1);
+        overview.Summary.OccupiedSpots.ShouldBe(1);
+        overview.Summary.UnknownSpots.ShouldBe(3);
+        overview.Summary.OccupancyRate.ShouldBe(.5);
+        var details = await service.GetLotDetailsAsync(lot.Id, CancellationToken.None);
+        details!.UnknownSpots.ShouldBe(3);
+        details.Spots.Single(x => x.DeviceId == "missing").DataStatus.ShouldBe("missing");
+        details.Spots.Single(x => x.DeviceId == "stale-free").DataStatus.ShouldBe("stale");
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 
     private static ApplicationDbContext CreateDbContext()

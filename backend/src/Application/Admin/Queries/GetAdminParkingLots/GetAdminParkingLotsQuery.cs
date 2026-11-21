@@ -1,6 +1,8 @@
 using Masters.Api.Application.Admin.Models;
 using Masters.Api.Application.Common.Interfaces;
 using Masters.Api.Application.Common.Security;
+using Masters.Api.Application.Common.Models;
+using Microsoft.Extensions.Options;
 
 namespace Masters.Api.Application.Admin.Queries.GetAdminParkingLots;
 
@@ -10,14 +12,19 @@ public sealed record GetAdminParkingLotsQuery : IRequest<List<AdminParkingLotLis
 public sealed class GetAdminParkingLotsQueryHandler : IRequestHandler<GetAdminParkingLotsQuery, List<AdminParkingLotListItemDto>>
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly TimeProvider _clock;
+    private readonly int _maxAgeSeconds;
 
-    public GetAdminParkingLotsQueryHandler(IApplicationDbContext dbContext)
+    public GetAdminParkingLotsQueryHandler(IApplicationDbContext dbContext, TimeProvider clock, IOptions<TelemetryFreshnessOptions> freshness)
     {
         _dbContext = dbContext;
+        _clock = clock;
+        _maxAgeSeconds = freshness.Value.MaxAgeSeconds;
     }
 
     public async Task<List<AdminParkingLotListItemDto>> Handle(GetAdminParkingLotsQuery request, CancellationToken cancellationToken)
     {
+        var now = _clock.GetUtcNow();
         var lots = await _dbContext.ParkingLots
             .AsNoTracking()
             .OrderBy(x => x.City)
@@ -41,7 +48,8 @@ public sealed class GetAdminParkingLotsQueryHandler : IRequestHandler<GetAdminPa
                         spot.LastDistanceCm,
                         spot.LastLatitude,
                         spot.LastLongitude,
-                        spot.LastTelemetryAtUtc))
+                        spot.LastTelemetryAtUtc,
+                        TelemetryFreshnessOptions.Status(spot.LastTelemetryAtUtc, now, _maxAgeSeconds)))
                     .ToList()
             })
             .ToListAsync(cancellationToken);
@@ -50,8 +58,8 @@ public sealed class GetAdminParkingLotsQueryHandler : IRequestHandler<GetAdminPa
             .Select(x =>
             {
                 var totalSpots = x.Spots.Count;
-                var occupiedSpots = x.Spots.Count(spot => spot.Occupied);
-                var freeSpots = totalSpots - occupiedSpots;
+                var occupiedSpots = x.Spots.Count(spot => spot.DataStatus == "current" && spot.Occupied);
+                var freeSpots = x.Spots.Count(spot => spot.DataStatus == "current" && !spot.Occupied);
 
                 return new AdminParkingLotListItemDto(
                     x.Id,
@@ -63,7 +71,8 @@ public sealed class GetAdminParkingLotsQueryHandler : IRequestHandler<GetAdminPa
                     totalSpots,
                     occupiedSpots,
                     freeSpots,
-                    x.Spots);
+                    x.Spots,
+                    totalSpots - occupiedSpots - freeSpots);
             })
             .ToList();
     }

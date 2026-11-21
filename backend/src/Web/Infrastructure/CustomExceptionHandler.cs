@@ -2,6 +2,7 @@ using Masters.Api.Application.Common.Exceptions;
 using Masters.Api.Application.Common.Interfaces;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using AppNotFoundException = Masters.Api.Application.Common.Exceptions.NotFoundException;
 
 namespace Masters.Api.Web.Infrastructure;
@@ -21,6 +22,7 @@ public class CustomExceptionHandler : IExceptionHandler
             { typeof(AppNotFoundException), HandleNotFoundException },
             { typeof(UnauthorizedAccessException), HandleUnauthorizedAccessException },
             { typeof(ForbiddenAccessException), HandleForbiddenAccessException },
+            { typeof(DbUpdateConcurrencyException), HandleConcurrentChange },
         };
     }
 
@@ -64,6 +66,16 @@ public class CustomExceptionHandler : IExceptionHandler
             Title = _text["problem.notFound.title"],
             Detail = exception.Message,
         });
+    }
+
+    private async Task HandleConcurrentChange(HttpContext httpContext, Exception exception)
+    {
+        httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status409Conflict,
+            Title = _text["problem.concurrentChange.title"],
+        }, cancellationToken: httpContext.RequestAborted);
     }
 
     private async Task HandleUnauthorizedAccessException(HttpContext httpContext, Exception ex)

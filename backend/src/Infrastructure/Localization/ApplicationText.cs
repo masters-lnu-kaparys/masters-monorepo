@@ -37,6 +37,7 @@ public sealed class ApplicationText : IApplicationText
         ["problem.notFound.title"] = "The requested resource was not found.",
         ["problem.unauthorized.title"] = "Authentication is required.",
         ["problem.forbidden.title"] = "You do not have permission to perform this action.",
+        ["problem.concurrentChange.title"] = "The parking spot was updated. Refresh its details and try again.",
     };
 
     private static readonly IReadOnlyDictionary<string, string> Ukrainian = new Dictionary<string, string>(StringComparer.Ordinal)
@@ -71,6 +72,7 @@ public sealed class ApplicationText : IApplicationText
         ["problem.notFound.title"] = "Запитаний ресурс не знайдено.",
         ["problem.unauthorized.title"] = "Потрібна автентифікація.",
         ["problem.forbidden.title"] = "У вас недостатньо прав для виконання цієї дії.",
+        ["problem.concurrentChange.title"] = "Дані місця змінилися. Оновіть їх і повторіть дію.",
     };
 
     public string this[string key] => ResolveDictionary().TryGetValue(key, out var value)

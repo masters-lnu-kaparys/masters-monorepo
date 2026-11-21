@@ -1,4 +1,5 @@
 using Masters.Api.Application.Common.Interfaces;
+using Masters.Api.Application.Common.Models;
 using Masters.Api.Infrastructure.Data;
 using Masters.Api.Infrastructure.Data.Interceptors;
 using Masters.Api.Infrastructure.Localization;
@@ -19,6 +20,11 @@ public static class DependencyInjection
         Guard.Against.Null(connectionString, message: "Connection string 'DefaultConnection' not found.");
 
         builder.Services.Configure<DemoMapOptions>(builder.Configuration.GetSection(DemoMapOptions.SectionName));
+        builder.Services.AddOptions<TelemetryFreshnessOptions>()
+            .Bind(builder.Configuration.GetSection(TelemetryFreshnessOptions.SectionName))
+            .Validate(x => x.MaxAgeSeconds > 0 && x.MaxAgeSeconds <= 86400,
+                "Telemetry freshness must be between 1 and 86400 seconds.")
+            .ValidateOnStart();
         builder.Services.Configure<DemoTopologyOptions>(builder.Configuration.GetSection(DemoTopologyOptions.SectionName));
         builder.Services.Configure<IoTHubDeviceCommandsOptions>(builder.Configuration.GetSection(IoTHubDeviceCommandsOptions.SectionName));
 

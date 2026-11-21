@@ -12,6 +12,7 @@ public sealed class ParkingSpotConfiguration : IEntityTypeConfiguration<ParkingS
 
         builder.Property(x => x.DeviceId)
             .HasMaxLength(128)
+            .IsConcurrencyToken()
             .IsRequired();
 
         builder.Property(x => x.DisplayName)
@@ -20,7 +21,10 @@ public sealed class ParkingSpotConfiguration : IEntityTypeConfiguration<ParkingS
 
         builder.Property(x => x.SourceKind)
             .HasConversion<int>()
+            .IsConcurrencyToken()
             .IsRequired();
+
+        builder.Property(x => x.LastTelemetryAtUtc).IsConcurrencyToken();
 
         builder.HasIndex(x => x.DeviceId)
             .IsUnique();

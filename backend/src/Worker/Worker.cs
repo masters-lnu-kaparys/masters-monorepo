@@ -4,6 +4,7 @@ using Masters.Api.Worker.Models;
 using Masters.Api.Worker.Options;
 using Masters.Api.Worker.Services;
 using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 
 namespace Masters.Api.Worker;
 
@@ -85,7 +86,14 @@ public sealed class Worker : BackgroundService
                 continue;
             }
 
-            await PersistTelemetryAsync(message, stoppingToken);
+            try
+            {
+                await PersistTelemetryAsync(message, stoppingToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _logger.LogDebug("Skipped telemetry for {DeviceId} after a concurrent change.", message.DeviceId);
+            }
         }
     }
 
@@ -114,6 +122,14 @@ public sealed class Worker : BackgroundService
                 _logger.LogWarning(
                     "Rejected Event Hub update for device {DeviceId} because no mapped spot or lot is available.",
                     message.DeviceId);
+                break;
+
+            case TelemetryWriteOutcome.FutureMeasurement:
+                _logger.LogWarning("Skipped telemetry for {DeviceId} with a measurement time in the future.", message.DeviceId);
+                break;
+
+            case TelemetryWriteOutcome.ConcurrentChange:
+                _logger.LogDebug("Skipped telemetry for {DeviceId} after a concurrent change.", message.DeviceId);
                 break;
         }
     }

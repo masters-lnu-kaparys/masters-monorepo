@@ -3,6 +3,7 @@ using Masters.Api.Infrastructure.Options;
 using Masters.Api.Web.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Masters.Api.Application.Common.Models;
 
 namespace Masters.Api.Web.Services;
 
@@ -36,15 +37,18 @@ public sealed class ParkingReadService : IParkingReadService
     private readonly ApplicationDbContext _dbContext;
     private readonly TimeProvider _timeProvider;
     private readonly DemoMapOptions _demoMapOptions;
+    private readonly int _maxAgeSeconds;
 
     public ParkingReadService(
         ApplicationDbContext dbContext,
         TimeProvider timeProvider,
-        IOptions<DemoMapOptions> demoMapOptions)
+        IOptions<DemoMapOptions> demoMapOptions,
+        IOptions<TelemetryFreshnessOptions>? freshnessOptions = null)
     {
         _dbContext = dbContext;
         _timeProvider = timeProvider;
         _demoMapOptions = demoMapOptions.Value;
+        _maxAgeSeconds = (freshnessOptions?.Value ?? new TelemetryFreshnessOptions()).MaxAgeSeconds;
     }
 
     public async Task<DashboardSummaryDto> GetSummaryAsync(CancellationToken cancellationToken)
@@ -56,11 +60,13 @@ public sealed class ParkingReadService : IParkingReadService
             mapOverview.Summary.OccupiedSpots,
             mapOverview.Summary.FreeSpots,
             mapOverview.Summary.OccupancyRate,
-            mapOverview.Summary.LastUpdatedAtUtc);
+            mapOverview.Summary.LastUpdatedAtUtc,
+            mapOverview.Summary.UnknownSpots);
     }
 
     public async Task<List<SpotStateDto>> GetSpotsAsync(CancellationToken cancellationToken)
     {
+        var now = _timeProvider.GetUtcNow();
         return await _dbContext.ParkingSpots
             .AsNoTracking()
             .OrderBy(x => x.ParkingLot.City)
@@ -72,7 +78,8 @@ public sealed class ParkingReadService : IParkingReadService
                 x.DisplayName,
                 x.IsOccupied,
                 x.LastDistanceCm,
-                x.LastTelemetryAtUtc))
+                x.LastTelemetryAtUtc,
+                TelemetryFreshnessOptions.Status(x.LastTelemetryAtUtc, now, _maxAgeSeconds)))
             .ToListAsync(cancellationToken);
     }
 
@@ -92,6 +99,7 @@ public sealed class ParkingReadService : IParkingReadService
 
     public async Task<LotDetailsDto?> GetLotDetailsAsync(long lotId, CancellationToken cancellationToken)
     {
+        var now = _timeProvider.GetUtcNow();
         var lot = await _dbContext.ParkingLots
             .AsNoTracking()
             .Where(x => x.Id == lotId)
@@ -124,7 +132,8 @@ public sealed class ParkingReadService : IParkingReadService
                 x.DisplayName,
                 x.IsOccupied,
                 x.LastDistanceCm,
-                x.LastTelemetryAtUtc))
+                x.LastTelemetryAtUtc,
+                TelemetryFreshnessOptions.Status(x.LastTelemetryAtUtc, now, _maxAgeSeconds)))
             .ToListAsync(cancellationToken);
 
         var recentActivity = await _dbContext.ParkingTelemetries
@@ -140,10 +149,13 @@ public sealed class ParkingReadService : IParkingReadService
                 x.MeasuredAtUtc))
             .ToListAsync(cancellationToken);
 
-        var freeSpots = lot.TotalSpots - lot.OccupiedSpots;
-        var occupancyRate = lot.TotalSpots == 0
+        var occupiedSpots = spots.Count(x => x.DataStatus == "current" && x.Occupied);
+        var freeSpots = spots.Count(x => x.DataStatus == "current" && !x.Occupied);
+        var unknownSpots = spots.Count - occupiedSpots - freeSpots;
+        var currentSpots = occupiedSpots + freeSpots;
+        var occupancyRate = currentSpots == 0
             ? 0
-            : (double)lot.OccupiedSpots / lot.TotalSpots;
+            : (double)occupiedSpots / currentSpots;
 
         return new LotDetailsDto(
             lot.Id,
@@ -153,12 +165,13 @@ public sealed class ParkingReadService : IParkingReadService
             lot.Latitude,
             lot.Longitude,
             lot.TotalSpots,
-            lot.OccupiedSpots,
+            occupiedSpots,
             freeSpots,
             occupancyRate,
             lot.LastUpdatedAtUtc,
             spots,
-            recentActivity);
+            recentActivity,
+            unknownSpots);
     }
 
     public async Task<SpotHistoryDto?> GetSpotHistoryAsync(
@@ -231,6 +244,8 @@ public sealed class ParkingReadService : IParkingReadService
 
     private async Task<List<ParkingLotMapDto>> GetLotMapDtosAsync(CancellationToken cancellationToken)
     {
+        var now = _timeProvider.GetUtcNow();
+        var cutoff = now.AddSeconds(-_maxAgeSeconds);
         var lots = await _dbContext.ParkingLots
             .AsNoTracking()
             .OrderBy(x => x.City)
@@ -244,7 +259,8 @@ public sealed class ParkingReadService : IParkingReadService
                 x.Latitude,
                 x.Longitude,
                 TotalSpots = x.Spots.Count(),
-                OccupiedSpots = x.Spots.Count(spot => spot.IsOccupied),
+                OccupiedSpots = x.Spots.Count(spot => spot.IsOccupied && spot.LastTelemetryAtUtc >= cutoff && spot.LastTelemetryAtUtc <= now),
+                FreeSpots = x.Spots.Count(spot => !spot.IsOccupied && spot.LastTelemetryAtUtc >= cutoff && spot.LastTelemetryAtUtc <= now),
                 LastUpdatedAtUtc = x.Spots.Max(spot => (DateTimeOffset?)spot.LastTelemetryAtUtc)
             })
             .ToListAsync(cancellationToken);
@@ -252,10 +268,11 @@ public sealed class ParkingReadService : IParkingReadService
         return lots
             .Select(x =>
             {
-                var freeSpots = x.TotalSpots - x.OccupiedSpots;
-                var occupancyRate = x.TotalSpots == 0
+                var freeSpots = x.FreeSpots;
+                var currentSpots = freeSpots + x.OccupiedSpots;
+                var occupancyRate = currentSpots == 0
                     ? 0
-                    : (double)x.OccupiedSpots / x.TotalSpots;
+                    : (double)x.OccupiedSpots / currentSpots;
 
                 return new ParkingLotMapDto(
                     x.Id,
@@ -268,7 +285,8 @@ public sealed class ParkingReadService : IParkingReadService
                     x.OccupiedSpots,
                     freeSpots,
                     occupancyRate,
-                    x.LastUpdatedAtUtc);
+                    x.LastUpdatedAtUtc,
+                    x.TotalSpots - currentSpots);
             })
             .ToList();
     }
@@ -278,10 +296,11 @@ public sealed class ParkingReadService : IParkingReadService
         var totalLots = lots.Count;
         var totalSpots = lots.Sum(x => x.TotalSpots);
         var occupiedSpots = lots.Sum(x => x.OccupiedSpots);
-        var freeSpots = totalSpots - occupiedSpots;
-        var occupancyRate = totalSpots == 0
+        var freeSpots = lots.Sum(x => x.FreeSpots);
+        var currentSpots = freeSpots + occupiedSpots;
+        var occupancyRate = currentSpots == 0
             ? 0
-            : (double)occupiedSpots / totalSpots;
+            : (double)occupiedSpots / currentSpots;
         var lastUpdatedAtUtc = lots
             .Select(x => x.LastUpdatedAtUtc)
             .OrderByDescending(x => x)
@@ -293,6 +312,7 @@ public sealed class ParkingReadService : IParkingReadService
             occupiedSpots,
             freeSpots,
             occupancyRate,
-            lastUpdatedAtUtc);
+            lastUpdatedAtUtc,
+            totalSpots - currentSpots);
     }
 }

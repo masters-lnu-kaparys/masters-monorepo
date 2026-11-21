@@ -68,9 +68,7 @@ public sealed class UpdateParkingSpotCommandHandler : IRequestHandler<UpdatePark
         var previousSourceKind = entity.SourceKind;
         var previousDeviceId = entity.DeviceId;
 
-        entity.DisplayName = request.DisplayName.Trim();
-        entity.SourceKind = request.SourceKind;
-        entity.DeviceId = await ParkingSpotDeviceIdGenerator.ResolveAsync(
+        var deviceId = await ParkingSpotDeviceIdGenerator.ResolveAsync(
             _dbContext,
             entity.ParkingLotId,
             request.SourceKind,
@@ -80,6 +78,20 @@ public sealed class UpdateParkingSpotCommandHandler : IRequestHandler<UpdatePark
             currentSourceKind: previousSourceKind,
             _text,
             cancellationToken);
+
+        entity.DisplayName = request.DisplayName.Trim();
+        entity.SourceKind = request.SourceKind;
+        entity.DeviceId = deviceId;
+
+        if (previousSourceKind != entity.SourceKind
+            || !string.Equals(previousDeviceId, deviceId, StringComparison.Ordinal))
+        {
+            entity.IsOccupied = false;
+            entity.LastDistanceCm = null;
+            entity.LastLatitude = null;
+            entity.LastLongitude = null;
+            entity.LastTelemetryAtUtc = null;
+        }
 
         var detectedDevice = await _dbContext.DetectedDevices
             .SingleOrDefaultAsync(x => x.DeviceId == entity.DeviceId, cancellationToken);

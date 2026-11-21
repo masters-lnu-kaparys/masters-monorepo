@@ -2,14 +2,113 @@ using System.Net;
 using System.Net.Http.Json;
 using Masters.Api.Domain.Entities;
 using Masters.Api.Domain.Enums;
+using Masters.Api.Infrastructure.Data;
 using Masters.Api.Application.UnitTests.Web.Infrastructure;
 using Masters.Api.Web.Models;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Masters.Api.Application.UnitTests.Web;
 
 public class AuthEndpointTests
 {
+    [TestCase(SpotSourceKind.Real, "new-clock")]
+    [TestCase(SpotSourceKind.Simulated, "previous-clock")]
+    public async Task SqlRebindingMustClearAvailabilityAndKeepHistory(SpotSourceKind source, string deviceId)
+    {
+        await using var factory = new TestWebApplicationFactory();
+        var measured = DateTimeOffset.UtcNow.AddSeconds(-5);
+        var lot = new ParkingLot { Name = "Rebinding API", City = "Test", Address = "Test" };
+        var spot = new ParkingSpot
+        {
+            ParkingLot = lot,
+            DeviceId = "previous-clock",
+            DisplayName = "Before rebind",
+            SourceKind = SpotSourceKind.Real,
+            LastDistanceCm = 100,
+            LastTelemetryAtUtc = measured,
+            LastLatitude = 49,
+            LastLongitude = 24
+        };
+        await factory.SeedAsync(new ParkingTelemetry
+        {
+            ParkingSpot = spot,
+            MeasuredAtUtc = measured,
+            ReceivedAtUtc = measured,
+            DistanceCm = 100
+        });
+
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "test-admin");
+        client.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, "Admin");
+        var url = $"/api/admin/spots/{spot.Id}";
+
+        var rename = await client.PutAsJsonAsync(url, new
+        {
+            displayName = "Renamed",
+            sourceKind = (int)SpotSourceKind.Real,
+            deviceId = "previous-clock"
+        });
+        rename.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var renamed = await client.GetFromJsonAsync<LotDetailsDto>($"/api/lots/{lot.Id}");
+        renamed!.Spots.Single().DataStatus.ShouldBe("current");
+
+        // Keep a separate context at the old binding to model overlapping ingestion.
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var oldBinding = await db.ParkingSpots.SingleAsync();
+
+        var rebind = await client.PutAsJsonAsync(url, new
+        {
+            displayName = "After rebind",
+            sourceKind = (int)source,
+            deviceId
+        });
+        rebind.StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var details = await client.GetFromJsonAsync<LotDetailsDto>($"/api/lots/{lot.Id}");
+        details!.Spots.Single().DeviceId.ShouldBe(deviceId);
+        details.Spots.Single().DataStatus.ShouldBe("missing");
+        details.Spots.Single().DistanceCm.ShouldBeNull();
+        details.FreeSpots.ShouldBe(0);
+        details.UnknownSpots.ShouldBe(1);
+
+        oldBinding.LastTelemetryAtUtc = measured.AddSeconds(2);
+        await Should.ThrowAsync<DbUpdateConcurrencyException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+        (await db.ParkingTelemetries.SingleAsync()).MeasuredAtUtc.ShouldBe(measured);
+        var rebound = await db.ParkingSpots.SingleAsync();
+        rebound.LastLatitude.ShouldBeNull();
+        rebound.LastLongitude.ShouldBeNull();
+        rebound.LastTelemetryAtUtc.ShouldBeNull();
+    }
+
+    [Test]
+    public async Task SqlApiMustKeepMissingAndStaleSpotsOutOfAvailability()
+    {
+        await using var factory = new TestWebApplicationFactory();
+        var lot = new ParkingLot { Name = "Freshness API", City = "Test", Address = "Test",
+            Spots = {
+                new ParkingSpot { DeviceId = "api-missing", DisplayName = "Missing", SourceKind = SpotSourceKind.Real },
+                new ParkingSpot { DeviceId = "api-stale", DisplayName = "Stale", SourceKind = SpotSourceKind.Real, LastDistanceCm = 100, LastTelemetryAtUtc = DateTimeOffset.UtcNow.AddDays(-1) },
+                new ParkingSpot { DeviceId = "api-current", DisplayName = "Current", SourceKind = SpotSourceKind.Real, LastDistanceCm = 100, LastTelemetryAtUtc = DateTimeOffset.UtcNow.AddSeconds(-5) }
+            }};
+        await factory.SeedAsync(lot);
+        var client = factory.CreateClient();
+        client.DefaultRequestHeaders.Add(TestAuthHandler.UserHeader, "test-admin");
+        client.DefaultRequestHeaders.Add(TestAuthHandler.RolesHeader, "Admin");
+        var overview = await client.GetFromJsonAsync<MapOverviewDto>("/api/map/overview");
+        overview!.Summary.FreeSpots.ShouldBe(1);
+        overview.Summary.UnknownSpots.ShouldBe(2);
+        var details = await client.GetFromJsonAsync<LotDetailsDto>($"/api/lots/{lot.Id}");
+        details!.Spots.Single(x => x.DeviceId == "api-missing").DataStatus.ShouldBe("missing");
+        details.Spots.Single(x => x.DeviceId == "api-stale").DataStatus.ShouldBe("stale");
+        var admin = await client.GetFromJsonAsync<List<Application.Admin.Models.AdminParkingLotListItemDto>>("/api/admin/lots");
+        admin![0].FreeSpots.ShouldBe(1);
+        admin[0].UnknownSpots.ShouldBe(2);
+        admin[0].Spots.Single(x => x.DeviceId == "api-missing").DataStatus.ShouldBe("missing");
+    }
+
     [Test]
     public async Task ShouldReturnUnauthorizedForAnonymousMapRequest()
     {

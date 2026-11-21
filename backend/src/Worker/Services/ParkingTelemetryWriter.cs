@@ -15,7 +15,9 @@ public enum TelemetryWriteOutcome
     Saved = 1,
     Duplicate = 2,
     UnknownSpot = 3,
-    SourceMismatch = 4
+    SourceMismatch = 4,
+    FutureMeasurement = 5,
+    ConcurrentChange = 6
 }
 
 public sealed record TelemetryWriteResult(
@@ -56,6 +58,11 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         CancellationToken cancellationToken)
     {
         var receivedAtUtc = _timeProvider.GetUtcNow();
+        if (message.MeasuredAtUtc > receivedAtUtc)
+        {
+            return new TelemetryWriteResult(TelemetryWriteOutcome.FutureMeasurement);
+        }
+
         var spot = await _dbContext.ParkingSpots
             .Include(x => x.ParkingLot)
             .SingleOrDefaultAsync(x => x.DeviceId == message.DeviceId, cancellationToken);
@@ -108,15 +115,20 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
             _dbContext.DetectedDevices.Remove(detectedDevice);
         }
 
-        spot.IsOccupied = message.Occupied;
-        spot.LastDistanceCm = message.DistanceCm;
-        if (message.Latitude is not null && message.Longitude is not null)
+        // Late records belong in history, but must not roll the live map backwards.
+        if (spot.LastTelemetryAtUtc is null
+            || spot.LastTelemetryAtUtc > receivedAtUtc
+            || message.MeasuredAtUtc > spot.LastTelemetryAtUtc)
         {
-            spot.LastLatitude = message.Latitude;
-            spot.LastLongitude = message.Longitude;
+            spot.IsOccupied = message.Occupied;
+            spot.LastDistanceCm = message.DistanceCm;
+            if (message.Latitude is not null && message.Longitude is not null)
+            {
+                spot.LastLatitude = message.Latitude;
+                spot.LastLongitude = message.Longitude;
+            }
+            spot.LastTelemetryAtUtc = message.MeasuredAtUtc;
         }
-
-        spot.LastTelemetryAtUtc = message.MeasuredAtUtc;
 
         _dbContext.ParkingTelemetries.Add(new ParkingTelemetry
         {
@@ -131,6 +143,12 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         {
             await _dbContext.SaveChangesAsync(cancellationToken);
             return new TelemetryWriteResult(TelemetryWriteOutcome.Saved, spot.Id, spot.DisplayName);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            // A measurement read before a rebind must not update the new device's state.
+            _dbContext.ChangeTracker.Clear();
+            return new TelemetryWriteResult(TelemetryWriteOutcome.ConcurrentChange, spot.Id, spot.DisplayName);
         }
         catch (DbUpdateException ex) when (IsUniqueConstraintViolation(ex))
         {
@@ -159,11 +177,14 @@ public sealed class ParkingTelemetryWriter : IParkingTelemetryWriter
         }
 
         entity.LastSeenAtUtc = receivedAtUtc;
-        entity.LastMeasuredAtUtc = message.MeasuredAtUtc;
-        entity.LastDistanceCm = message.DistanceCm;
-        entity.LastOccupied = message.Occupied;
-        entity.LastLatitude = message.Latitude;
-        entity.LastLongitude = message.Longitude;
+        if (entity.LastMeasuredAtUtc > receivedAtUtc || message.MeasuredAtUtc > entity.LastMeasuredAtUtc)
+        {
+            entity.LastMeasuredAtUtc = message.MeasuredAtUtc;
+            entity.LastDistanceCm = message.DistanceCm;
+            entity.LastOccupied = message.Occupied;
+            entity.LastLatitude = message.Latitude;
+            entity.LastLongitude = message.Longitude;
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
     }

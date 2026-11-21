@@ -179,6 +179,62 @@ public class ParkingTelemetryWriterTests
         dbContext.DetectedDevices.Count().ShouldBe(0);
     }
 
+    [Test]
+    public async Task LateTelemetryMustRemainInHistoryWithoutRollingBackCurrentState()
+    {
+        await using var db = CreateDbContext();
+        var latest = DateTimeOffset.UtcNow;
+        db.ParkingSpots.Add(new ParkingSpot { DeviceId = "ordered", DisplayName = "Ordered",
+            SourceKind = SpotSourceKind.Real, IsOccupied = true, LastDistanceCm = 20,
+            LastTelemetryAtUtc = latest, ParkingLot = new ParkingLot { Name = "Order", City = "Test", Address = "Test" } });
+        await db.SaveChangesAsync();
+        var writer = new ParkingTelemetryWriter(db, TimeProvider.System, Options.Create(new DemoTopologyOptions()), Options.Create(new DeviceBindingOptions()));
+        await writer.WriteAsync(new DeviceTelemetryMessage("ordered", latest.AddMinutes(-1), 100, false), SpotSourceKind.Real, CancellationToken.None);
+        var spot = await db.ParkingSpots.SingleAsync();
+        spot.IsOccupied.ShouldBeTrue();
+        spot.LastDistanceCm.ShouldBe(20);
+        spot.LastTelemetryAtUtc.ShouldBe(latest);
+        (await db.ParkingTelemetries.SingleAsync()).MeasuredAtUtc.ShouldBe(latest.AddMinutes(-1));
+    }
+
+    [TestCase(false)]
+    [TestCase(true)]
+    public async Task CorrectMeasurementMustBeCurrentAfterDeviceClockIsCorrected(bool hasLegacyFutureState)
+    {
+        await using var db = CreateDbContext();
+        var now = new DateTimeOffset(2026, 1, 15, 10, 0, 0, TimeSpan.Zero);
+        var spot = new ParkingSpot
+        {
+            DeviceId = "clock-fixture",
+            DisplayName = "Clock fixture",
+            SourceKind = SpotSourceKind.Real,
+            IsOccupied = hasLegacyFutureState,
+            LastDistanceCm = hasLegacyFutureState ? 20 : null,
+            LastTelemetryAtUtc = hasLegacyFutureState ? now.AddMinutes(10) : null,
+            ParkingLot = new ParkingLot { Name = "Clock", City = "Test", Address = "Test" }
+        };
+        db.ParkingSpots.Add(spot);
+        await db.SaveChangesAsync();
+
+        var writer = new ParkingTelemetryWriter(db, new FixedClock(now),
+            Options.Create(new DemoTopologyOptions()), Options.Create(new DeviceBindingOptions()));
+
+        var ahead = await writer.WriteAsync(new DeviceTelemetryMessage(spot.DeviceId, now.AddMinutes(10), 20, true),
+            SpotSourceKind.Real, CancellationToken.None);
+        ahead.Outcome.ShouldBe(TelemetryWriteOutcome.FutureMeasurement);
+        (await db.ParkingTelemetries.CountAsync()).ShouldBe(0);
+
+        var corrected = await writer.WriteAsync(new DeviceTelemetryMessage(spot.DeviceId, now, 100, false),
+            SpotSourceKind.Real, CancellationToken.None);
+        corrected.Outcome.ShouldBe(TelemetryWriteOutcome.Saved);
+        db.ChangeTracker.Clear();
+        var saved = await db.ParkingSpots.SingleAsync();
+        saved.LastTelemetryAtUtc.ShouldBe(now);
+        saved.LastDistanceCm.ShouldBe(100);
+        saved.IsOccupied.ShouldBeFalse();
+        (await db.ParkingTelemetries.SingleAsync()).MeasuredAtUtc.ShouldBe(now);
+    }
+
     private static ApplicationDbContext CreateDbContext()
     {
         var options = new DbContextOptionsBuilder<ApplicationDbContext>()
@@ -186,5 +242,10 @@ public class ParkingTelemetryWriterTests
             .Options;
 
         return new ApplicationDbContext(options);
+    }
+
+    private sealed class FixedClock(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
     }
 }
