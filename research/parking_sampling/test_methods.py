@@ -1,6 +1,5 @@
 """Scientific correctness checks, independent reference and analytical fixtures."""
 import dataclasses
-import json
 import random
 import unittest
 import numpy as np
@@ -8,11 +7,6 @@ import numpy as np
 from simulation import (Observation,reference_simulate,context,random_step,AGES,ACTIONS,THRESHOLDS)
 from kernels import simulate_window,grid_transition_counts,risk_training_window
 from markov_baseline import age_cost,verify_published_examples,solve_occupation_lp
-from data_access import load_bundle
-from training import smooth_tables
-from policies import risk_policy
-from policies import constant_policy
-from run_phase3 import strict_select,resource_select
 
 def fast(ends,states,start=0,kind=0,delays=(60,60),lookup=None,flags=(True,True),cdf=None,seed=123):
     return simulate_window(np.asarray(ends,np.int64),np.asarray(states,np.int8),start,kind,np.array(delays,np.int64),
@@ -20,31 +14,6 @@ def fast(ends,states,start=0,kind=0,delays=(60,60),lookup=None,flags=(True,True)
       np.tile([.2,.5,1.],(2,1)) if cdf is None else cdf,np.array([5,30,120],np.int64),np.uint64(seed))
 
 class MethodTests(unittest.TestCase):
-    def test_strict_selection_rejects_one_extra_long_missed_vacancy(self):
-        p=constant_policy(120);p.family='candidate'
-        reference=np.zeros(17,np.int64);reference[[0,1,2,3]]=[86400,1440,100,100]
-        candidate=reference.copy();candidate[1]=1000;candidate[14]=1
-        selected=strict_select([p],{'fixed_60':reference,p.name:candidate},'candidate')
-        self.assertTrue(selected['fallback']);self.assertEqual(selected['policy'],'fixed_60')
-
-    def test_strict_selection_minimizes_calls_then_errors(self):
-        a=constant_policy(120);b=constant_policy(300);a.family=b.family='candidate'
-        reference=np.zeros(17,np.int64);reference[[0,1,2,3]]=[86400,1440,100,100]
-        x=reference.copy();x[1]=1000;x[2]=99
-        y=x.copy();y[2]=98
-        chosen=strict_select([a,b],{'fixed_60':reference,a.name:x,b.name:y},'candidate')
-        self.assertEqual(chosen['policy'],b.name)
-
-    def test_resource_comparison_keeps_reference_with_boundary_overhead(self):
-        p=constant_policy(60);raw=np.zeros(17,np.int64);raw[0]=86401;raw[1]=1441
-        chosen=resource_select([p],{'fixed_60':raw},'fixed',1440)
-        self.assertEqual(chosen['policy'],'fixed_60')
-
-    def test_s2_resource_point_retains_nominal_policy_and_reports_overshoot(self):
-        raw=np.zeros(17,np.int64);raw[0]=86400;raw[1]=722
-        chosen=resource_select([],{'S2_720':raw},'S2',720)
-        self.assertEqual(chosen['policy'],'S2_720');self.assertTrue(chosen['realized_exceeds_nominal_budget'])
-
     def test_hand_computed_errors_and_delay(self):
         values,hist=fast([20,40,100,130,200],[0,1,0,1,0])
         self.assertEqual((values[0],values[1],values[2],values[3]),(200,4,40,50))
@@ -137,21 +106,6 @@ class MethodTests(unittest.TestCase):
         self.assertEqual(m[0,3,1],1)
         self.assertAlmostEqual(f[0,3],20/60)
 
-    def test_smoothing_and_feature_pooling(self):
-        n=np.ones((48,6),np.int64);f=np.full((48,6),.1);o=np.full((48,6),.2);m=np.zeros((48,6,5))
-        full=smooth_tables(n,f,o,m);no_time=smooth_tables(n,f,o,m,False,True);no_run=smooth_tables(n,f,o,m,True,False)
-        self.assertTrue(np.all(full['n']==1));self.assertTrue(np.all(no_time['n']==4));self.assertTrue(np.all(no_run['n']==6))
-        np.testing.assert_allclose(no_time['pf'],.1);np.testing.assert_allclose(no_run['po'],.2)
-
-    def test_risk_rule_normalization_and_fallback(self):
-        model={'n':np.full((48,6),100),'pf':np.zeros((48,6)),'po':np.zeros((48,6)),
-          'pm':np.zeros((48,6,5)),'use_time':True,'use_run':True}
-        model['pm'][:,:,0]=.1
-        raw=risk_policy('raw','C1',model,.01,.01,.001)
-        rate=risk_policy('rate','C2',model,.01,.01,.001,normalize_misses=True)
-        self.assertTrue(np.all(raw.fallback==1));self.assertTrue(np.all(raw.lookup==5))
-        self.assertTrue(np.all(rate.fallback==0));self.assertTrue(np.all(rate.lookup==300))
-
     def test_compressed_transition_counts_match_explicit_grid(self):
         ends=np.array([7,9,12,41,100],np.int64);states=np.array([0,1,0,1,0],np.int8)
         values=states[np.searchsorted(ends,np.arange(0,100,5),side='right')]
@@ -176,9 +130,5 @@ class MethodTests(unittest.TestCase):
         self.assertLess(result['max_flow_residual'],1e-8)
         self.assertGreaterEqual(result['mean_interval'],3-1e-8)
         self.assertAlmostEqual(np.array(result['occupation']).sum(),1)
-
-    def test_final_partition_is_refused(self):
-        with self.assertRaises(PermissionError):load_bundle(('quarantine_final_test',))
-        with self.assertRaises(PermissionError):load_bundle(('quarantine_train_reserved',))
 
 if __name__=='__main__':unittest.main(verbosity=2)

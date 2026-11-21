@@ -1,9 +1,0 @@
-﻿cell,bays,windows,eligible,adjacent_pair,legacy_history,end_reset,recursive_reset
-training256_primary_7_days,256,1494,133491,4,1,1,1
-training256_sensitivity_1_day,256,7243,304236,11,6,6,6
-tuning128_primary_7_days,128,477,52166,5,2,2,2
-tuning128_sensitivity_1_day,128,1629,97419,8,4,4,4
-check256_primary_7_days,256,916,101739,1,0,0,0
-check256_sensitivity_1_day,256,3424,192610,5,2,2,2
-check512_primary_7_days,512,1813,186468,1,0,0,0
-check512_sensitivity_1_day,512,6448,344067,3,1,1,1

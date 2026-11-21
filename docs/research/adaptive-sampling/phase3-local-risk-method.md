@@ -1,6 +1,6 @@
 # Локальне оцінювання часової похибки та калібрування розкладу
 
-Дата: 25.10.2026. Дослідницька фаза 3. [Результати](phase3-local-risk-report.md), [точні джерела](phase3-local-risk-sources.md), [плани першого досліду](phase3-local-risk-plan.json) і [калібрування](phase3-local-risk-calibration-v3-plan.json).
+Метод зафіксовано 25.10.2026. [Остаточне оцінювання](phase4-assessment.md) · [Наукові джерела](phase3-local-risk-sources.md) · [Калібрування під час розроблення](https://github.com/masters-lnu-kaparys/masters-monorepo/blob/b59786d0d268578bba07f5e074dfcd9f4a7c2fbb/docs/research/adaptive-sampling/phase3-local-risk-calibration-v3-plan.json)
 
 ## Постановка
 

@@ -1,15 +1,16 @@
-"""Pre-test safeguards and counter/analysis equivalence on synthetic histories."""
+"""Integrity, schedule and analysis checks for the published replay."""
+import json
 import tempfile
 import unittest
 from pathlib import Path
 import numpy as np
-from phase4_pipeline import frozen_arm,select_component,aggregate_components,evaluate_component,validate_frozen
+from phase4_pipeline import CATALOG, frozen_arm, select_component, aggregate_components, evaluate_component
 from phase4_analysis import paired_intervals,success_gate,metric_summary
 from local_risk import estimates
 from frozen_local_priors import shared_priors
-from local_risk_calibration_v3 import realized_by_bay
 from simulation import reference_simulate,Observation,BASE_ACTIONS,AGES
-from prepare_data import sha256
+from prepare_data import DOCS, ROOT, sha256
+from replay_final import FINAL_ROLE, read_final_partition, read_json
 
 
 class FinalPipelineTests(unittest.TestCase):
@@ -20,12 +21,12 @@ class FinalPipelineTests(unittest.TestCase):
             expected,_=estimates(n,cost,arm)
             np.testing.assert_array_equal(frozen_arm(n,cost,state,context,arm),expected)
 
-    def test_hash_allocation_matches_development(self):
-        weights={'z':.2,'a':.7,'m':.1};names=list(weights);bays=np.arange(1,50)
-        values=np.arange(3*len(bays)*17).reshape(3,len(bays),17)
-        for seed in range(20261025,20261035):
-            _,choices=realized_by_bay(values,bays,names,weights,seed)
-            self.assertEqual(choices,[select_component(b,weights,seed) for b in bays])
+    def test_hash_allocation_matches_published_demo_vectors(self):
+        catalog = read_json(CATALOG)
+        weights = catalog['policies']['author']['weights']
+        golden = read_json(ROOT / 'frontend/tests/fixtures/sampling-demo-golden.json')
+        for bay, expected in golden['assignments']:
+            self.assertEqual(select_component(bay, weights, catalog['allocation_seed']), expected)
 
     def test_whole_policy_mixture_preserves_exposure_and_counts(self):
         values=np.zeros((2,3,17),dtype=np.int64);values[:,:,0]=86400
@@ -69,18 +70,25 @@ class FinalPipelineTests(unittest.TestCase):
           'F_difference_seconds_per_bay_day':[-2,0],'O_difference_seconds_per_bay_day':[-2,-1]}}
         gate=success_gate(a,b,ci);self.assertTrue(gate['point_estimate_display_success']);self.assertFalse(gate['joint3_interval_support'])
 
-    def test_locked_guard_rejects_tampering(self):
-        with tempfile.TemporaryDirectory() as t:
-            p=Path(t)/'frozen.txt';p.write_text('one',encoding='utf-8')
-            lock={'phase3_complete':True,'phase4_may_start':True,'files':{'frozen.txt':sha256(p)},
-              'package_versions':{},'allowed_roles':['quarantine_train_reserved','quarantine_final_test']}
-            validate_frozen(lock,Path(t));p.write_text('two',encoding='utf-8')
-            with self.assertRaises(PermissionError):validate_frozen(lock,Path(t))
+    def test_replay_rejects_tampered_partition_and_different_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            prepared = Path(directory)
+            partition = prepared / f'{FINAL_ROLE}.parquet'
+            partition.write_bytes(b'test partition')
+            checksum = sha256(partition)
+            receipt = read_json(DOCS / 'phase2-data-lock.json')['data_preparation']
+            receipt['files'] = {FINAL_ROLE: {'sha256': checksum}}
+            manifest = prepared / 'data-manifest.json'
+            manifest.write_text(json.dumps(receipt), encoding='utf-8')
 
-    def test_locked_guard_rejects_unfrozen_or_reserved_validation(self):
-        with self.assertRaises(PermissionError):validate_frozen({'phase3_complete':False})
-        with self.assertRaises(PermissionError):validate_frozen({'phase3_complete':True,'phase4_may_start':True,
-          'files':{},'package_versions':{},'allowed_roles':['quarantine_validation_unused']})
+            self.assertEqual(read_final_partition(prepared), (partition, checksum))
+            partition.write_bytes(b'changed partition')
+            with self.assertRaisesRegex(ValueError, 'Final partition differs'):
+                read_final_partition(prepared)
+            receipt['source_csv_sha256'] = 'different source'
+            manifest.write_text(json.dumps(receipt), encoding='utf-8')
+            with self.assertRaisesRegex(ValueError, 'source_csv_sha256'):
+                read_final_partition(prepared)
 
     def test_zero_eligible_vacancies_are_missing_not_zero(self):
         raw=np.zeros(17);raw[0]=86400;raw[1]=1440

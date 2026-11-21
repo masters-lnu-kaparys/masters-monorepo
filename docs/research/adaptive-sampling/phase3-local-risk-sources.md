@@ -1,6 +1,6 @@
 # Джерела та межі заяви про внесок локального методу
 
-25.10.2026. Доповнення до [попереднього огляду](phase3-analytic-sources.md). [Бібліографія](phase3-local-risk-references.bib). Власні формули й числа наведено у [методі](phase3-local-risk-method.md) та [звіті](phase3-local-risk-report.md).
+Огляд від 25.10.2026 доповнює огляд літератури, виконаний на етапі розроблення. [Попередній огляд](https://github.com/masters-lnu-kaparys/masters-monorepo/blob/b59786d0d268578bba07f5e074dfcd9f4a7c2fbb/docs/research/adaptive-sampling/phase3-analytic-sources.md) · [Бібліографія](phase3-local-risk-references.bib) · [Метод](phase3-local-risk-method.md) · [Остаточний звіт](phase4-display-report.md)
 
 ## Найближча перевірена паркувальна постановка
 
