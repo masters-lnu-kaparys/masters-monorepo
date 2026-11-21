@@ -1,0 +1,12 @@
+{
+  "scope": "validation_tuning_not_final_test",
+  "data_source": "https://data.melbourne.vic.gov.au/explore/dataset/on-street-car-parking-sensor-data-2019/information/",
+  "calculation": "author replay experiment",
+  "tuning_results_sha256": "9518e41250d8ac3c055cf0bd1a74479532f4087b6325707478a99a84dd7e24a7",
+  "cohort_sha256": "a6e6a8edb3101326ec279f3364efb452489b73de9a442a8a3f9f531be7a7d1b1",
+  "source_code_sha256": "aaaf525c121cb555e96c5eab00d119de740a68d8655b51a6585b2fd982da8837",
+  "figures": {
+    "docs/research/adaptive-sampling/figures/phase3-validation-tradeoffs.png": "1ae026b1739d056c50d79b91afcba39db44764c95c66388115be2c1904a1a73b",
+    "docs/research/adaptive-sampling/figures/phase3-validation-tradeoffs.svg": "17589654fd8addda14b6aff0a1bbc88379f3ced4e4a611f569e8333be35ebcb4"
+  }
+}

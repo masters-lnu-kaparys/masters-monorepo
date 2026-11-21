@@ -1,3 +1,5 @@
+import { SpotStatusChip } from "../components/SpotStatusChip";
+import { maintainConnection } from "../api/realtime";
 import ExploreRoundedIcon from "@mui/icons-material/ExploreRounded";
 import LaunchRoundedIcon from "@mui/icons-material/LaunchRounded";
 import DirectionsCarFilledRoundedIcon from "@mui/icons-material/DirectionsCarFilledRounded";
@@ -26,7 +28,7 @@ import { CircleMarker, MapContainer, Polyline, TileLayer, useMap, ZoomControl } 
 import { fetchLotDetails, fetchMapOverview, fetchSpotHistory } from "../api/client";
 import { apiBaseUrl, requestAccessToken } from "../api/http";
 import { DistanceHistoryChart } from "../components/DistanceHistoryChart";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 import { fetchDrivingRoute } from "../routing/osrm";
 import type { LotDetails, MapOverview, MapSnapshot, SpotHistory } from "../types/api";
 type GeolocationState = "idle" | "searching" | "resolved" | "fallback" | "denied" | "unsupported";
@@ -157,40 +159,6 @@ function SummaryCard({
   );
 }
 
-function SpotStatusChip({ occupied }: { occupied: boolean }) {
-  const { t } = useI18n();
-  const config = occupied
-    ? {
-        label: t("monitoring.status.occupied"),
-        color: "#b45309",
-        background: "rgba(217, 119, 6, 0.12)",
-      }
-    : {
-        label: t("monitoring.status.free"),
-        color: "#116149",
-        background: "rgba(17, 97, 73, 0.12)",
-      };
-
-  return (
-    <Box
-      sx={{
-        minWidth: 88,
-        px: 1.5,
-        py: 0.75,
-        borderRadius: "8px",
-        textAlign: "center",
-        fontSize: 14,
-        fontWeight: 700,
-        lineHeight: 1,
-        color: config.color,
-        bgcolor: config.background,
-      }}
-    >
-      {config.label}
-    </Box>
-  );
-}
-
 function formatUpdateLabel(utc: string | null, locale: string, t: TranslationFn): string {
   if (!utc) {
     return t("common.noDataYet");
@@ -317,25 +285,40 @@ export function MonitoringPage() {
   const { t, language, locale } = useI18n();
   const [overview, setOverview] = useState<MapOverview | null>(null);
   const [selectedLotId, setSelectedLotId] = useState<number | null>(null);
-  const [lotDetails, setLotDetails] = useState<LotDetails | null>(null);
-  const [selectedSpotId, setSelectedSpotId] = useState<number | null>(null);
-  const [history, setHistory] = useState<SpotHistory | null>(null);
+  const [loadedLot, setLotDetails] = useState<LotDetails | null>(null);
+  const [preferredSpotId, setSelectedSpotId] = useState<number | null>(null);
+  const [loadedHistory, setHistory] = useState<SpotHistory | null>(null);
+  const [failedLotId, setFailedLotId] = useState<number | null>(null);
+  const [failedSpotId, setFailedSpotId] = useState<number | null>(null);
   const [loadingOverview, setLoadingOverview] = useState(true);
-  const [loadingLot, setLoadingLot] = useState(false);
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [realtimeOnline, setRealtimeOnline] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [geolocationState, setGeolocationState] = useState<GeolocationState>("idle");
   const [mapView, setMapView] = useState<MapViewState | null>(null);
   const [userPosition, setUserPosition] = useState<[number, number] | null>(null);
-  const [routeView, setRouteView] = useState<RouteViewState | null>(null);
-  const [routingError, setRoutingError] = useState<string | null>(null);
+  const [loadedRoute, setRouteView] = useState<RouteViewState | null>(null);
+  const [routeFailure, setRouteFailure] = useState<{ lotId: number | null; message: string } | null>(null);
   const [routingInProgress, setRoutingInProgress] = useState(false);
   const selectedLotIdRef = useRef<number | null>(null);
+  const selectedSpotIdRef = useRef<number | null>(null);
   const hasInitialLocationResolution = useRef(false);
   const mapCardRef = useRef<HTMLDivElement | null>(null);
   const lastTrackedPositionRef = useRef<[number, number] | null>(null);
   const lastRerouteAtRef = useRef(0);
   const routeRefreshInFlightRef = useRef(false);
+
+  // Data belongs to its request key; changing selection cannot expose an old response.
+  const lotDetails = loadedLot?.id === selectedLotId ? loadedLot : null;
+  const selectedSpotId = lotDetails?.spots.some(spot => spot.id === preferredSpotId)
+    ? preferredSpotId : lotDetails?.spots[0]?.id ?? null;
+  const history = loadedHistory?.spotId === selectedSpotId ? loadedHistory : null;
+  const loadingLot = selectedLotId !== null && lotDetails === null && failedLotId !== selectedLotId;
+  const loadingHistory = selectedSpotId !== null && history === null && failedSpotId !== selectedSpotId;
+  const routeView = loadedRoute?.destinationLotId === selectedLotId ? loadedRoute : null;
+  const routingError = routeFailure?.lotId === selectedLotId ? routeFailure?.message ?? null : null;
+  const setRoutingError = useCallback((message: string | null) => {
+    setRouteFailure(message ? { lotId: selectedLotId, message } : null);
+  }, [selectedLotId]);
 
   const numberFormatter = useMemo(
     () => new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }),
@@ -423,7 +406,9 @@ export function MonitoringPage() {
   }, []);
 
   const applyLotDetails = useCallback((nextLot: LotDetails) => {
+    if (selectedLotIdRef.current !== nextLot.id) return;
     setLotDetails(nextLot);
+    setFailedLotId(null);
     setError(null);
 
     setSelectedSpotId((previousSpotId) => {
@@ -439,54 +424,47 @@ export function MonitoringPage() {
     });
   }, []);
 
-  const loadOverview = useCallback(async () => {
-    setLoadingOverview(true);
-
-    try {
-      const nextOverview = await fetchMapOverview();
+  const loadOverview = useCallback(() => {
+    return fetchMapOverview().then((nextOverview) => {
       applyOverview(nextOverview);
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t("monitoring.loadOverviewError"));
-    } finally {
       setLoadingOverview(false);
-    }
+    }, (loadError: unknown) => {
+      setError(loadError instanceof Error ? loadError.message : t("monitoring.loadOverviewError"));
+      setLoadingOverview(false);
+    });
   }, [applyOverview, t]);
 
   const loadLotDetails = useCallback(
-    async (lotId: number) => {
-      setLoadingLot(true);
-
-      try {
-        const nextLot = (await fetchLotDetails(lotId)) as LotDetails;
-        applyLotDetails(nextLot);
-      } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : t("monitoring.loadLotError"));
-      } finally {
-        setLoadingLot(false);
-      }
+    (lotId: number) => {
+      return fetchLotDetails(lotId).then((nextLot) => {
+        applyLotDetails(nextLot as LotDetails);
+      }, (loadError: unknown) => {
+        if (selectedLotIdRef.current === lotId) {
+          setFailedLotId(lotId);
+          setError(loadError instanceof Error ? loadError.message : t("monitoring.loadLotError"));
+        }
+      });
     },
     [applyLotDetails, t],
   );
 
-  const loadHistory = useCallback(async (spotId: number | null) => {
+  const loadHistory = useCallback((spotId: number | null) => {
     if (!spotId) {
-      setHistory(null);
       return;
     }
 
-    setLoadingHistory(true);
-
-    try {
-      const nextHistory = await fetchSpotHistory(spotId, {
+    return fetchSpotHistory(spotId, {
         maxPoints: 240,
-      });
+      }).then((nextHistory) => {
+      if (selectedSpotIdRef.current !== spotId) return;
       setHistory(nextHistory);
+      setFailedSpotId(null);
       setError(null);
-    } catch (loadError) {
+    }, (loadError: unknown) => {
+      if (selectedSpotIdRef.current !== spotId) return;
+      setFailedSpotId(spotId);
       setError(loadError instanceof Error ? loadError.message : t("monitoring.loadHistoryError"));
-    } finally {
-      setLoadingHistory(false);
-    }
+    });
   }, [t]);
 
   const scrollToMap = useCallback(() => {
@@ -581,22 +559,11 @@ export function MonitoringPage() {
 
   useEffect(() => {
     if (!selectedLotId) {
-      setLotDetails(null);
-      setSelectedSpotId(null);
-      setRouteView(null);
-      setRoutingError(null);
       return;
     }
 
     void loadLotDetails(selectedLotId);
   }, [loadLotDetails, selectedLotId]);
-
-  useEffect(() => {
-    if (routeView && selectedLotId && routeView.destinationLotId !== selectedLotId) {
-      setRouteView(null);
-      setRoutingError(null);
-    }
-  }, [routeView, selectedLotId]);
 
   useEffect(() => {
     void loadHistory(selectedSpotId);
@@ -605,6 +572,10 @@ export function MonitoringPage() {
   useEffect(() => {
     selectedLotIdRef.current = selectedLotId;
   }, [selectedLotId]);
+
+  useEffect(() => {
+    selectedSpotIdRef.current = selectedSpotId;
+  }, [selectedSpotId]);
 
   useEffect(() => {
     const connection = new HubConnectionBuilder()
@@ -648,16 +619,22 @@ export function MonitoringPage() {
       }
     });
 
-    void connection
-      .start()
-      .catch(() => {
-        // Monitoring page stays usable without realtime updates.
-      });
+    const stopConnection = maintainConnection(connection, setRealtimeOnline);
+    // Polling also lets the server expire stale measurements without new events.
+    let refreshing = false;
+    const poll = window.setInterval(() => {
+      if (refreshing) return;
+      refreshing = true;
+      void fetchMapOverview().then(applyOverview).catch(() => setRealtimeOnline(false))
+        .finally(() => { refreshing = false; });
+      if (selectedLotIdRef.current) void loadLotDetails(selectedLotIdRef.current);
+    }, 15000);
 
     return () => {
-      void connection.stop();
+      window.clearInterval(poll);
+      stopConnection();
     };
-  }, [loadLotDetails]);
+  }, [applyOverview, loadLotDetails]);
 
   const refreshRoute = useCallback(
     async (
@@ -688,6 +665,7 @@ export function MonitoringPage() {
 
       try {
         const nextRoute = await fetchDrivingRoute(origin, [selectedLot.latitude, selectedLot.longitude]);
+        if (selectedLotIdRef.current !== selectedLot.id) return;
 
         setRouteView({
           ...nextRoute,
@@ -697,7 +675,7 @@ export function MonitoringPage() {
         lastTrackedPositionRef.current = origin;
         lastRerouteAtRef.current = now;
       } catch {
-        if (options?.force) {
+        if (options?.force && selectedLotIdRef.current === selectedLot.id) {
           setRouteView(null);
           setRoutingError(t("monitoring.route.error"));
         }
@@ -709,7 +687,7 @@ export function MonitoringPage() {
         }
       }
     },
-    [selectedLot, t],
+    [selectedLot, setRoutingError, t],
   );
 
   const buildRoute = useCallback(async () => {
@@ -775,7 +753,7 @@ export function MonitoringPage() {
   }, [overview?.zoom, refreshRoute, routeView, selectedLot]);
 
   const locationHint = describeLocationMode(geolocationState, overview?.city ?? null, fallbackCityLabel, t);
-  const occupancyPercent = overview
+  const occupancyPercent = overview && overview.summary.freeSpots + overview.summary.occupiedSpots > 0
     ? new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 0 }).format(overview.summary.occupancyRate)
     : "-";
   const mapCenter: LatLngExpression = mapView?.center ?? [49.8419, 24.0315];
@@ -841,6 +819,8 @@ export function MonitoringPage() {
 
         {error ? <Alert severity="error">{error}</Alert> : null}
         {routingError ? <Alert severity="warning">{routingError}</Alert> : null}
+        {!realtimeOnline ? <Alert severity="warning">{t("monitoring.connection.reconnecting")}</Alert> : null}
+        {overview && overview.summary.unknownSpots > 0 ? <Alert severity="info">{t("monitoring.missingCount", { count: overview.summary.unknownSpots })}</Alert> : null}
 
         <Box
           sx={{
@@ -954,7 +934,7 @@ export function MonitoringPage() {
 
                     {overview.lots.map((lot) => {
                       const selected = lot.id === selectedLotId;
-                      const color = occupancyColor(lot.occupancyRate);
+                      const color = lot.freeSpots + lot.occupiedSpots === 0 ? "#64748b" : occupancyColor(lot.occupancyRate);
                       const radius = selected ? 18 : 14 + Math.min(lot.totalSpots, 8);
 
                       return (
@@ -1187,7 +1167,7 @@ export function MonitoringPage() {
                               </Box>
 
                               <Stack alignItems="flex-end" spacing={0.75}>
-                                <SpotStatusChip occupied={spot.occupied} />
+                                <SpotStatusChip occupied={spot.occupied} dataStatus={spot.dataStatus} />
                                 <Typography variant="caption" color="text.secondary">
                                   {formatUpdateLabel(spot.lastUpdatedAtUtc, locale, t)}
                                 </Typography>
@@ -1209,7 +1189,7 @@ export function MonitoringPage() {
                       {selectedSpot
                         ? t("monitoring.historyStatus", {
                             spot: selectedSpot.displayName,
-                            status: selectedSpot.occupied ? t("monitoring.status.occupied") : t("monitoring.status.free"),
+                            status: selectedSpot.dataStatus !== "current" ? t(`monitoring.status.${selectedSpot.dataStatus}`) : selectedSpot.occupied ? t("monitoring.status.occupied") : t("monitoring.status.free"),
                           })
                         : t("monitoring.historySelectSpot")}
                     </Typography>
@@ -1254,7 +1234,7 @@ export function MonitoringPage() {
                               </Typography>
                             </Box>
                             <Box sx={{ textAlign: "right" }}>
-                              <SpotStatusChip occupied={activity.occupied} />
+                              <SpotStatusChip occupied={activity.occupied} dataStatus="current" />
                               <Typography variant="caption" color="text.secondary" sx={{ display: "block", mt: 0.5 }}>
                                 {formatUpdateLabel(activity.measuredAtUtc, locale, t)}
                               </Typography>

@@ -1,9 +1,11 @@
 import { Auth0Provider } from "@auth0/auth0-react";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { CssBaseline, ThemeProvider, createTheme } from "@mui/material";
 import { createRoot } from "react-dom/client";
 import "leaflet/dist/leaflet.css";
 import App from "./App";
+import { APP_ROUTES } from "./app/routes";
+import { SamplingDemoPage } from "./pages/SamplingDemoPage";
 import { AUTH_CALLBACK_PATH, getAuth0RuntimeConfig } from "./auth/config";
 import { FullScreenStatus } from "./components/FullScreenStatus";
 import { LanguageProvider } from "./i18n/LanguageProvider";
@@ -93,7 +95,10 @@ const root = (
   <ThemeProvider theme={theme}>
     <CssBaseline />
     <LanguageProvider>
-      {auth0Config ? (
+      <BrowserRouter>
+        <Routes>
+          <Route path={APP_ROUTES.samplingDemo} element={<SamplingDemoPage />} />
+          <Route path="/*" element={auth0Config ? (
         <Auth0Provider
           domain={auth0Config.domain}
           clientId={auth0Config.clientId}
@@ -113,9 +118,7 @@ const root = (
             window.history.replaceState({}, document.title, nextPath);
           }}
         >
-          <BrowserRouter>
-            <App />
-          </BrowserRouter>
+          <App />
         </Auth0Provider>
       ) : (
         <FullScreenStatus
@@ -123,7 +126,9 @@ const root = (
           descriptionKey="app.auth0Missing.description"
           severity="warning"
         />
-      )}
+      )} />
+        </Routes>
+      </BrowserRouter>
     </LanguageProvider>
   </ThemeProvider>
 );

@@ -1,0 +1,31 @@
+{
+  "protocol_id": "masters-parking-adaptive-display-v0.2-draft",
+  "created_on": "2026-10-25",
+  "status": "reviewable_draft_not_permission_to_open_final_test",
+  "supersedes_original_protocol": false,
+  "reason_for_separate_version": "Originalv0.1 jointly required F/O and zeroM60. The new method has an observed N/F/O tradeoff improvement but nonzeroM60, so it is not a winner underv0.1. This draft makes the user-facing display-error question explicit; all original failures remain in the record.",
+  "research_question": "Does the frozen hierarchical integral-risk schedule with whole-policy calibration reduce measurements while reducing BOTH false-free and false-occupied display time compared with fixed60, and retain an advantage over frozen strong controls?",
+  "author_modification": "Specific L.1-L.6 model and calibration, with alpha500 chosen by fitting objective and the exact3 frozen component weights. Generic partial pooling, LP and randomization are not claimed new.",
+  "candidate": {
+    "selection_file": ".codex-work/parking-local-risk-20261025/calibration-v3/selection-before-check.json",
+    "headline": "bay_full_alpha500_display_guarded",
+    "allocation_seed": 20261025,
+    "component_weights": {"bay_full_alpha500_F2_O2": 0.29406679572196653, "bay_full_alpha500_F2_O4": 0.07746827866892442, "bay_full_alpha500_F4_O4": 0.628464925609109},
+    "context": "paid state x6hour civil-clock bin x observed-run age[60,300,900,3600,14400]; Bay identity and TRAINING histories only",
+    "maximum_pause_seconds": 300,
+    "missing_history": "frozen pooled-context fallback"
+  },
+  "training_before_any_final_evaluation": "Freeze and hash all training/runtime/evaluation code and shared priors from the1063 development-training bays. Only after that may the previously permitted Jan-Jun histories of reserved867 bays be read to append LOCAL statistics using apply_frozen_priors; global priors, alpha, action grid, component weights and seeds cannot change. Do not read reserved Jul-Sep or final Oct-Dec occupancy to train or tune. A no-history bay uses the original pooled fallback. The Jan-Jun local-history setting is disclosed, not unseen-device zero-shot generalization.",
+  "test_data": "Exactly the867 reservedBayIds and Oct-Dec2019 quality-controlled windows already fixed in phase2. Primary>=7day known windows; secondary>=1day overlapping windows. Keep gaps/conflicts/DST masks, no forward filling and the original half-open intervals and edge censoring.",
+  "reference": "fixed60. Retain fixed5 engineering reference, frozenC3/C4, frozenS2 budget variants and frozen shared/personalized/unshrunk control mixtures. No outcome-based winner selection on the final test.",
+  "primary_metrics": ["measurements per observedBay-day", "false-free seconds per observedBay-day", "false-occupied seconds per observedBay-day"],
+  "secondary_metrics": ["all missed-episode duration profiles[0,30,60,120,300] with numerator/denominator", "detection delay distribution", "equal-Bay macro means", "fraction ofBayIds with worseF/O or morecalls", "fallback/history-supported groups", "all10predeclared allocation seeds"],
+  "coverage_interpretation": "M60 is not constrained to zero in this separate display-focused question; its observed cost is ALWAYS shown next to gains. No acceptable operational miss fraction is invented from development outcomes.",
+  "replications": "10 common observation-initialization phases per window, originalseed20261018; the primary Bay-table allocation is fixed byseed20261025. Also report all allocationseeds20261025..20261034 without picking a favorite. Exact expected model-mixture counters and primary realized allocation counters are separate.",
+  "success": "On the primary>=7day final set, the primary realized schedule must have point-estimate calls reduction>=10%, F<=fixed60 and O<=fixed60. Statistical evidence uses paired wholeBayId resampling5000times, seed20261018, retaining all windows/phases together. Report pointwise95% intervals; for a joint3-metric improvement claim also report Bonferroni98.333333% marginal intervals, with the usual bootstrap approximation caveat. Lower bound on calls reduction need only exceed0, not10; the10% requirement is an engineering point estimate. Secondary sensitivity is reported regardless of sign.",
+  "control_comparison": "Main deployable contrasts use weights frozen before final states. Report actual expected/realized budget mismatch and bothF/O. Any hindsight exact-budget envelopes are retrospective diagnostics only; no parameter is changed from them.",
+  "negative_result": "If the final effect fails, report failure without changing methods, metrics, seeds or selection. Any later revision is exploratory and requires a new external holdout, not a second attempt at confirmation on the same867 bays.",
+  "physical_claims": "No ESP32 battery-life claim, ultrasound failure claim or independent physical accuracy claim follows from interval replay.",
+  "phase4_may_start": false,
+  "final_test_evaluated": false
+}

@@ -1,0 +1,24 @@
+{
+  "scope": "phase3_validation_only",
+  "files": {
+    "docs/research/adaptive-sampling/phase3-method-report.md": "5ba0c750e32c296e330e97d865b201846636315d6d01a8a41bbb47469e8375e2",
+    "docs/research/adaptive-sampling/phase3-verification.json": "90efd6c4ec23fe78316465e611524b3902608eaaf865ec7fda5829d0364fe841",
+    "docs/research/adaptive-sampling/phase3-sources-evidence.json": "362a06c86cd57af84b3744afa7b6ed616027673f65d9302d5f11bf258707d319",
+    "docs/research/adaptive-sampling/phase3-candidate-results.csv": "543dc5702c17b892400e0a15daf31a2e0d267f8254a5a66e43ab9809e8aa0a7b",
+    "docs/research/adaptive-sampling/phase3-validation-points.csv": "8eb597c179e0b413330c7a8873304667bb976a63963bd8ad96d52a80c9298a2c",
+    "docs/research/adaptive-sampling/figures/phase3-figure-manifest.json": "52b8fa1cc958de0d89388b029e1b701fc5de2cab2019c4a8fb968ef73a18577f",
+    "docs/research/adaptive-sampling/figures/phase3-validation-tradeoffs.png": "1ae026b1739d056c50d79b91afcba39db44764c95c66388115be2c1904a1a73b",
+    "docs/research/adaptive-sampling/figures/phase3-validation-tradeoffs.svg": "17589654fd8addda14b6aff0a1bbc88379f3ced4e4a611f569e8333be35ebcb4",
+    ".codex-work/parking-research-phase3-20261018/candidate-results-checksums.json": "ffa6be4a42c39748b7fedea2ba8b7e179c61683dfcb20e87730f3d78a7943445",
+    "docs/research/adaptive-sampling/phase3-method-lock.json": "f1be970bc6546e7d61c4bcfcc5baee2179f17949fced5117e859e48060b4baf2",
+    "docs/research/adaptive-sampling/README.md": "7af4a424d1fb97e3adf7443dc81c19f48c80caf453008967cf227d2907c6cc5d",
+    "docs/research/adaptive-sampling/sources.md": "62d1e56077ffa356457ba0b08ce2517b60123ab52b1632b1acda37a7edd0e6b4",
+    "docs/research/adaptive-sampling/references.bib": "619da7a419411b995471d69edd8e2a197a4c78a4ed18e3857a7515bcc73f5d2a",
+    "research/parking_sampling/build_phase3_report.py": "aaaf525c121cb555e96c5eab00d119de740a68d8655b51a6585b2fd982da8837",
+    "research/parking_sampling/verify_methods.py": "ccd6144b5229c01bc80b40928b47c0081cf68852dd0285c91965bb1b5a548628",
+    "research/parking_sampling/README.md": "083a39ab809711ba9bc6c70ba24ae8ec2b70b1080068ae0cf6cb096f2ae9f30e",
+    "research/parking_sampling/requirements.txt": "27e6cbd0563f088a50e3db335020adbd4dbb47f950cdd427d638fc903a4b677e"
+  },
+  "all_tests_passed": true,
+  "final_test_evaluated": false
+}

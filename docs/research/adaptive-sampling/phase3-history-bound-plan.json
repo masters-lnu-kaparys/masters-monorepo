@@ -1,0 +1,13 @@
+{
+  "created_on": "2026-10-25",
+  "scope": "phase3_post_stability_analytical_refinement_no_policy_retuning",
+  "prior_results_known": "C4 stability and all3600 first-hour start offsets for the8 validation windows with generic G75 risky pairs are already known; both C3 and C4 have zero observed M60 in that enumeration.",
+  "fixed_parameters": {"tau_seconds":60,"free_cap_seconds":75,"long_pause_observed_run_threshold_seconds":900},
+  "hypothesis": "The generic adjacent-pair count can be tightened for a policy that uses free pauses>tau only after an unchanged observed-free run>=A. A prior occupied interval of duration>=G must be observed under the global pause capG. The occupied pause cap tau forces an occupied observation no earlier than its end minus tau; this bounds the later observed-free-run age.",
+  "candidate_bound": "Count D>=tau and B+D<G only if p-anchor>A, where p is the preceding occupied start and anchor=max(replay_start, ends_of_prior_forced_occupied_intervals - tau). A zero count certifies coverage on the supplied path for any admissible starting phase.",
+  "proof_obligations": ["all pauses<=G", "occupied pauses<=tau", "free pauses at observed-run age<A are<=tau", "trace binary, merged, positive intervals, correct instantaneous measurements", "strict inequalities and censoring match the existing protocol"],
+  "experiments": "Unchanged C3/75 and existing training256 plus development check256/512, original primary and sensitivity windows. No search over G or A and no final-test access.",
+  "metric_semantics": "Explicitly distinguish a free episode without an in-episode observation from a free episode displayed occupied throughout. For tau60 and occupied pauses<=60, the latter cannot occur on an ideal trace. A fully unsampled free episode can instead remain displayed free.",
+  "novelty_claim": "Own derivation for review; do not assert world-first or empirical accuracy superiority.",
+  "final_test_access": false
+}

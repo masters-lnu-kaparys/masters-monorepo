@@ -8,7 +8,7 @@ import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { APP_ROUTES } from "../app/routes";
 import { LanguageSwitcher } from "../components/LanguageSwitcher";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 
 type HighlightRowProps = {
   icon: ReactNode;

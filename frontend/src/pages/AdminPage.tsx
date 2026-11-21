@@ -1,3 +1,4 @@
+import { SpotStatusChip } from "../components/SpotStatusChip";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import EditRoundedIcon from "@mui/icons-material/EditRounded";
@@ -36,7 +37,7 @@ import {
   updateAdminSpot,
 } from "../api/client";
 import { AdminDeviceMap } from "../components/AdminDeviceMap";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 import type {
   AdminDetectedDevice,
   AdminParkingLot,
@@ -150,15 +151,11 @@ export function AdminPage() {
     [lots, selectedLotId],
   );
 
-  const loadLots = useCallback(async () => {
-    setLoading(true);
-
-    try {
-      const [lotsResponse, detectedDevicesResponse] = await Promise.all([
+  const loadLots = useCallback(() => {
+    return Promise.all([
         fetchAdminLots(),
         fetchAdminDetectedDevices(),
-      ]);
-
+      ]).then(([lotsResponse, detectedDevicesResponse]) => {
       setLots(lotsResponse);
       setDetectedDevices(detectedDevicesResponse);
       setError(null);
@@ -173,11 +170,11 @@ export function AdminPage() {
 
         return lotsResponse[0].id;
       });
-    } catch (loadError) {
-      setError(loadError instanceof Error ? loadError.message : t("admin.loadError"));
-    } finally {
       setLoading(false);
-    }
+    }, (loadError: unknown) => {
+      setError(loadError instanceof Error ? loadError.message : t("admin.loadError"));
+      setLoading(false);
+    });
   }, [t]);
 
   useEffect(() => {
@@ -452,11 +449,7 @@ export function AdminPage() {
                       <Box>
                         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                           <Typography fontWeight={800}>{device.deviceId}</Typography>
-                          <Chip
-                            size="small"
-                            color={device.lastOccupied ? "warning" : "success"}
-                            label={device.lastOccupied ? t("monitoring.status.occupied") : t("monitoring.status.free")}
-                          />
+                          <SpotStatusChip occupied={device.lastOccupied} dataStatus={device.dataStatus} />
                         </Stack>
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                           {t("admin.detectedDevices.lastMeasurement", {
@@ -642,11 +635,7 @@ export function AdminPage() {
                               <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
                                 <Typography fontWeight={800}>{spot.displayName}</Typography>
                                 <SpotSourceChip sourceKind={spot.sourceKind} />
-                                <Chip
-                                  size="small"
-                                  color={spot.occupied ? "warning" : "success"}
-                                  label={spot.occupied ? t("monitoring.status.occupied") : t("monitoring.status.free")}
-                                />
+                                <SpotStatusChip occupied={spot.occupied} dataStatus={spot.dataStatus} />
                               </Stack>
                               <Typography variant="body2" color="text.secondary" sx={{ mt: 0.75 }}>
                                 {t("common.deviceId")}: {spot.deviceId}

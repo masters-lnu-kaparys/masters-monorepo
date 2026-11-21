@@ -6,6 +6,16 @@ namespace Masters.Api.Worker.Services;
 
 public sealed class TelemetryPayloadParser
 {
+    public bool TryParseFromDevice(string payload, string? authenticatedDeviceId, out DeviceTelemetryMessage? message)
+    {
+        message = null;
+        if (string.IsNullOrWhiteSpace(authenticatedDeviceId) || !TryParse(payload, out var parsed)
+            || parsed is null || !string.Equals(parsed.DeviceId, authenticatedDeviceId, StringComparison.Ordinal))
+            return false;
+        message = parsed;
+        return true;
+    }
+
     public bool TryParse(string payload, out DeviceTelemetryMessage? message)
     {
         message = null;
@@ -20,7 +30,8 @@ public sealed class TelemetryPayloadParser
             using var document = JsonDocument.Parse(payload);
             var root = document.RootElement;
 
-            if (!TryReadDeviceId(root, out var deviceId) ||
+            if (root.ValueKind != JsonValueKind.Object ||
+                !TryReadDeviceId(root, out var deviceId) ||
                 !TryReadTimestamp(root, out var measuredAtUtc) ||
                 !TryReadDistance(root, out var distanceCm) ||
                 !TryReadOccupied(root, out var occupied))
@@ -58,7 +69,7 @@ public sealed class TelemetryPayloadParser
         }
 
         deviceId = property.GetString()?.Trim() ?? string.Empty;
-        return !string.IsNullOrWhiteSpace(deviceId);
+        return !string.IsNullOrWhiteSpace(deviceId) && deviceId.Length <= 128;
     }
 
     private static bool TryReadTimestamp(JsonElement root, out DateTimeOffset measuredAtUtc)
@@ -70,7 +81,8 @@ public sealed class TelemetryPayloadParser
             return false;
         }
 
-        if (!property.TryGetInt64(out var unixSeconds) || unixSeconds <= 0)
+        if (!property.TryGetInt64(out var unixSeconds) || unixSeconds <= 0
+            || unixSeconds > DateTimeOffset.MaxValue.ToUnixTimeSeconds())
         {
             return false;
         }
@@ -90,17 +102,21 @@ public sealed class TelemetryPayloadParser
 
         if (property.ValueKind == JsonValueKind.Number)
         {
-            return property.TryGetDouble(out distanceCm);
+            return property.TryGetDouble(out distanceCm) && IsValidDistance(distanceCm);
         }
 
         if (property.ValueKind == JsonValueKind.String)
         {
             var raw = property.GetString();
-            return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out distanceCm);
+            return double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out distanceCm)
+                && IsValidDistance(distanceCm);
         }
 
         return false;
     }
+
+    private static bool IsValidDistance(double distanceCm) =>
+        double.IsFinite(distanceCm) && distanceCm >= 2 && distanceCm <= 400;
 
     private static bool TryReadOccupied(JsonElement root, out bool occupied)
     {

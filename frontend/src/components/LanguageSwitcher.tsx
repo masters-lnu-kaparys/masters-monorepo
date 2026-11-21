@@ -1,5 +1,5 @@
 import { Box, Button } from "@mui/material";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 
 type LanguageSwitcherProps = {
   compact?: boolean;

@@ -1,0 +1,46 @@
+{
+  "updated_on": "2026-10-25",
+  "status": "phase3_practical_author_improvement_documented_display_protocol_pending",
+  "phase4_may_start": false,
+  "supersedes_for_readiness": "phase4-entry-lock.json",
+  "previous_candidate_record_preserved": true,
+  "reason": "Specific hierarchical local integral-risk scheduler and whole-policy calibration have measured development benefit and controlled ablations. Original zero-M60 requirement still fails; display-focused protocol is a separate draft, not activated.",
+  "required_evidence": [
+    "closest-analogue comparison",
+    "precise author modification with assumptions",
+    "controlled ablation isolating its effect",
+    "honest limits of the novelty claim"
+  ],
+  "completed_evidence": {
+    "matched_constraint_ablation": "All three arms selected the same C3 lookup; the asserted mechanism did not pass the declared success rule.",
+    "author_candidate": "C4/72 is not promoted as the main author improvement after stability analysis. A history-conditioned refinement of the analytical path bound is documented separately.",
+    "development_checks": "Prior check256/check512: both C3/75 and C4/72 have zero M60 in57600 first-hour phase replays. New original tuning128 >=1day replay: one C3 M60 at Bay1247, no C4 M60; all17 metrics and histograms independently verified on that window. This is observation coverage, not recovery of an entirely wrongly displayed vacancy.",
+    "simpler_controls": "Frozen simple72 and constant-state72 controls evaluated; all results and small failures disclosed.",
+    "minimum_stability": "The main training minimum72 is supported by one pair at one BayId. Rolling prefixes lose their zero-pair bound in later months. Wider training gives three supporting BayIds; no future guarantee.",
+    "history_bound": "Using the observed-run age restriction reduces generic bounds on the primary validation cohorts from1 each to0 for unchanged C3/75; on sensitivity cohorts from5/3 to2/1. This is an analytical improvement, not an empirically improved scheduler.",
+    "metric_semantics": "M60 is in-episode observation coverage. It is not the count of free episodes displayed occupied throughout.",
+    "C5_construction": "History bound converted to training-derived A(G):41621/61987/424725 seconds for G75/90/120. Prelocked44-schedule four-cell experiment failed usefulness gate. Guarded winner uses17.8-19.0% more samples than fixed60 on tuning128; C5 not promoted. No fresh check cohort opened.",
+    "budget_comparison": "Prelocked269-policy diagnostic, then explicitly post-primary326-policy coverage annex with the same72-second action available to simpler controls. Known development check256/check512 only. Frozen mixtures and hindsight exact-expected-budget envelopes reported separately. Without M60 two-stage controls closely match F/O; with M60 a small conditional C3 gain is observed in three admissible frozen-control cells. Fourth cell's control fails coverage. C4 has no substantial consistent F/O advantage. No world-novelty claim.",
+    "verification": "122 unit tests;12 independent runtime windows reproduce all17 counters and delay histograms.887 old manifest entries preserved; current artifact hashes recorded separately.",
+    "analytic_proof": "Own R.1-R.4 result with end and recursive forced-observation resets; non-Zeno real-time assumptions, arbitrary-start corollary, O(n) count, strictness and non-tightness examples.2916 exact integer-grid cases and200 seeded arbitrary-start cases passed. No formal proof-assistant verification.",
+    "analytic_recorded_data": "Eight unchanged known development cells; by-Bay old count equality verified. New recursive counts equal legacy H.3 everywhere; no additional empirical reduction.",
+    "analytic_prior_art": "Relevant primary definitions/theorems of S14/S15/S16 reviewed with exact read-scope and archived hashes. Broad temporal-logic sampling guarantees, one-state duration constraints, uncertainty-aware verification are known. Narrow exact formula compared; world originality not established.",
+    "exact_all_start_coverage": "Own specialized iff reduction S.1-S.2 for a finite free-run prefix then constant plateau. Integer boundaries and pauses reduce all real initialization times to integer representatives. Verified against1758 trace/profile cases and25527 integer plus51054 fractional forward runs. Exact stage resolves conservative bounds; this is policy verification, not a new superior online scheduler.",
+    "exact_development_findings": "C3 individually attainable episode counts: training256 main1/sensitivity2, tuning128 main1/sensitivity3, check256 main0/sensitivity1, check512 main0/sensitivity1.9 witness rows correspond to7 distinct recorded episodes. Each may require a different initialization. Old first-hour-phase zero results remain scoped and unchanged. C4 generic bounds are zero in all8 cells; no future physical guarantee.",
+    "current_author_method": "L.1-L.6: per-Bay empirical integrated wrong-display risk, state/clock/observed-age context, hierarchical partial pooling, cost-rate action rule and whole-policy constrained calibration. Known generic components; own precise specialization and measured effect, not a claim of world-first optimizer.",
+    "current_development_result": "Primary fixed allocation: calls11.9-21.8% lower, false-free time13.2-18.7% lower, false-occupied time8.4-18.8% lower than fixed60, on4 overlapping known development cells. All10 seeds improve both errors; worst seed calls reduction9.50%. No fresh confirmation cohort.",
+    "current_controls": "Frozen same-estimator ablations and simple policies, expanded900 controls (841 distinct tables), union1226 prior/simple definitions. Separate hindsight exact-expected-budget envelopes over pooled/personalized/unshrunk257 models and broad simple controls remain inferior on at least one error. Hindsight is not a deployable policy or confirmatory comparison.",
+    "current_limits": "M60nonzero0.167-0.248% of eligible free episode-phases; original protocol not met. Roughly one third to two fifths of Bays have worse personal F or O. No real energy measurement, physical sensor validation or universal optimality."
+  },
+  "remaining_before_phase4": [
+    "Finalize the research question and explicitly version the display-focused protocol; retain the original zero-M60 failure.",
+    "Freeze all candidate, training, runtime and evaluation code, shared priors, control weights, metrics, seeds and analysis before accessing final867 outcomes.",
+    "If permitted by the frozen pipeline, append only reserved Jan-Jun local statistics with frozen shared priors; never use reserved Jul-Sep or final Oct-Dec outcomes to tune.",
+    "Keep all final results regardless of sign and report M60, Bay-level harms and development reuse."
+  ],
+  "current_work": "phase3-local-risk-report.md",
+  "final_867_bay_test_evaluated": false,
+  "current_candidate": "bay_full_alpha500_display_guarded",
+  "original_zero_M60_protocol_satisfied": false,
+  "display_protocol_draft": "phase4-display-protocol-draft.json"
+}

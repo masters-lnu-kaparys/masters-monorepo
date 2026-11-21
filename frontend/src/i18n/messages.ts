@@ -1,9 +1,11 @@
 import type { AppLanguage } from "./config";
+import { samplingEn, samplingUk } from "../sampling/messages";
 
 type TranslationDictionary = Record<string, string>;
 type TranslationParams = Record<string, string | number>;
 
 const uk: TranslationDictionary = {
+  ...samplingUk,
   "common.language.uk": "Українська",
   "common.language.en": "English",
   "common.role.admin": "Роль: Admin",
@@ -116,6 +118,10 @@ const uk: TranslationDictionary = {
   "monitoring.firstMeasurementPending": "очікуємо перше вимірювання",
   "monitoring.status.occupied": "Зайнято",
   "monitoring.status.free": "Вільно",
+  "monitoring.status.missing": "Немає даних",
+  "monitoring.status.stale": "Дані застаріли",
+  "monitoring.missingCount": "Місць без актуальних даних: {count}. Вони не враховані як вільні чи зайняті.",
+  "monitoring.connection.reconnecting": "Відновлюємо зв’язок. Дані перевіряються періодично.",
   "monitoring.route.build": "Прокласти маршрут",
   "monitoring.route.loading": "Будуємо маршрут...",
   "monitoring.route.clear": "Сховати маршрут",
@@ -213,6 +219,7 @@ const uk: TranslationDictionary = {
 };
 
 const en: TranslationDictionary = {
+  ...samplingEn,
   "common.language.uk": "Українська",
   "common.language.en": "English",
   "common.role.admin": "Role: Admin",
@@ -325,6 +332,10 @@ const en: TranslationDictionary = {
   "monitoring.firstMeasurementPending": "waiting for the first measurement",
   "monitoring.status.occupied": "Occupied",
   "monitoring.status.free": "Free",
+  "monitoring.status.missing": "No data",
+  "monitoring.status.stale": "Outdated data",
+  "monitoring.missingCount": "Spaces without current data: {count}. They are excluded from available and occupied counts.",
+  "monitoring.connection.reconnecting": "Reconnecting. Data is checked periodically.",
   "monitoring.route.build": "Build route",
   "monitoring.route.loading": "Building route...",
   "monitoring.route.clear": "Hide route",

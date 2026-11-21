@@ -34,26 +34,14 @@ export function useEffectiveRoles() {
     () => readUserRoles(user as Record<string, unknown> | undefined),
     [user],
   );
-  const [tokenRoles, setTokenRoles] = useState<string[] | null>(null);
+  const [resolvedToken, setResolvedToken] = useState<{ subject: string; roles: string[] } | null>(null);
+  const subject = isAuthenticated ? user?.sub ?? null : null;
+  const tokenRoles = resolvedToken?.subject === subject ? resolvedToken?.roles ?? null : null;
 
   useEffect(() => {
     let active = true;
 
-    if (!isAuthenticated) {
-      setTokenRoles(null);
-      return () => {
-        active = false;
-      };
-    }
-
-    if (explicitRoles.length > 0) {
-      setTokenRoles(explicitRoles);
-      return () => {
-        active = false;
-      };
-    }
-
-    setTokenRoles(null);
+    if (!subject || explicitRoles.length > 0) return;
 
     void getAccessTokenSilently()
       .then((token) => {
@@ -61,20 +49,20 @@ export function useEffectiveRoles() {
           return;
         }
 
-        const claims = decodeJwtPayload(token);
+        const claims = token ? decodeJwtPayload(token) : undefined;
         const roles = readUserRoles(claims);
-        setTokenRoles(roles);
+        setResolvedToken({ subject, roles });
       })
       .catch(() => {
         if (active) {
-          setTokenRoles([]);
+          setResolvedToken({ subject, roles: [] });
         }
       });
 
     return () => {
       active = false;
     };
-  }, [explicitRoles, getAccessTokenSilently, isAuthenticated]);
+  }, [explicitRoles, getAccessTokenSilently, subject]);
 
   const roles = useMemo(() => {
     if (explicitRoles.length > 0) {

@@ -1,0 +1,6 @@
+{
+  "created_on": "2026-10-25",
+  "entry_lock_sha256": "2665ba14e0828371d0f64bc3ff6759f4a8f213e0b3cabf2e8170a9f78d6449b0",
+  "training_receipt_sha256": "f9a7f21c50c0bb50d3a19d7742a2097225e29266f60fea4fbd8f8e5c6982aa3c",
+  "all_final_outcomes_must_be_retained": true
+}

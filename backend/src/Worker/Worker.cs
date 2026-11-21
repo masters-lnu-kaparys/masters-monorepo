@@ -5,6 +5,7 @@ using Masters.Api.Worker.Options;
 using Masters.Api.Worker.Services;
 using Microsoft.Extensions.Options;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 
 namespace Masters.Api.Worker;
 
@@ -80,9 +81,10 @@ public sealed class Worker : BackgroundService
         {
             var rawPayload = partitionEvent.Data.EventBody.ToString();
 
-            if (!_payloadParser.TryParse(rawPayload, out var message) || message is null)
+            partitionEvent.Data.SystemProperties.TryGetValue("iothub-connection-device-id", out var authenticatedId);
+            if (!_payloadParser.TryParseFromDevice(rawPayload, authenticatedId as string, out var message) || message is null)
             {
-                _logger.LogWarning("Skipped malformed telemetry payload: {Payload}", rawPayload);
+                _logger.LogWarning("Skipped invalid telemetry or mismatched device identity.");
                 continue;
             }
 
@@ -93,6 +95,12 @@ public sealed class Worker : BackgroundService
             catch (DbUpdateConcurrencyException)
             {
                 _logger.LogDebug("Skipped telemetry for {DeviceId} after a concurrent change.", message.DeviceId);
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 8152 or 2628 or 8114 or 8115 or 547 })
+            {
+                // A bad record must not poison or restart the entire partition stream.
+                // Connectivity and other infrastructure errors still reach the retry loop.
+                _logger.LogError(ex, "Rejected telemetry record for device {DeviceId}.", message.DeviceId);
             }
         }
     }

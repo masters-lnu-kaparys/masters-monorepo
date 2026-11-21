@@ -1,0 +1,11 @@
+{
+  "created_on": "2026-10-25",
+  "scope": "Audit the already frozen calibration-v3 result; do not tune the target",
+  "known_before_audit": "All primary384-policy, Bay-state-control and calibrated-mixture outcomes are known. Headline was selected from fitting data before new constituent checks and passes its display-focused point-estimate usefulness gates. Original zeroM60 fails. Broad900control diagnostic is still running when this audit is declared.",
+  "runtime_QA": "Export the primary headline's three-component Bay-specific tables and pooled fallback to a self-contained research JSON. Independent runtime receives only BayId and the paid Observation. Validate8 deterministic hash-selected known-check windows(two per cell), plus available fallback windows, using primary phase0: all17counters and delay histogram versus the old independent forward simulator. No new cohort.",
+  "aggregation_audit": "In every check cell report both original exposure-weighted Bay-day metrics and equal-Bay macro averages, fraction of BayIds with worseF/worseO and fewer calls, known-training versus fallback Bay counts, plus M60 numerator/denominator. This is descriptive, not new success criteria or independent evidence.",
+  "union_control": "After the broad900 banks finish, combine all900 simple two-stage policies with all326 old controls INCLUDING C3/C4. Fit a frozen counterfactual control mixture using only the4 fitting cells at headline expected calls<=target; minimaxF/O. Target outcomes are already known, so label this post-target developmental diagnostic. Evaluate the fitted mixture on cached known-check banks. Also show exact-expected-budget per-cell hindsight envelope over all1226 controls, explicitly retrospective and not deployable evidence. Never use the result to retune the target.",
+  "limits": "No blanket perBay improvement, worst-case or future guarantee. One realized allocation is distinct from exact expectation over a table choice. Ten fixed allocation seeds are all reported. Pseudocount support is not independent evidence. Gamma0.9 is an engineering margin, not a statistical bound. Randomization, shrinkage and LP are established; originality claim must state the specialized method and measured isolated effects.",
+  "final_test_evaluated": false,
+  "phase4_may_start": false
+}

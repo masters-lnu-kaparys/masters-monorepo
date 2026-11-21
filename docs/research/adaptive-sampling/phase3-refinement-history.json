@@ -1,0 +1,13 @@
+{
+  "purpose": "Preserve original phase3 roadmap while updating the live roadmap after C3 refinement",
+  "original_artifact_manifest": "phase3-artifact-manifest.json",
+  "historical_file_mapping": [
+    {
+      "original_path": "docs/research/adaptive-sampling/README.md",
+      "snapshot_path": "docs/research/adaptive-sampling/phase3-roadmap-snapshot.md",
+      "snapshot_sha256": "7af4a424d1fb97e3adf7443dc81c19f48c80caf453008967cf227d2907c6cc5d",
+      "current_sha256": "dddea39341b43667d908e66a29b016f7af669ae04feafc8f399442667ec53808",
+      "reason": "Live research status updated after new development results; old method code/results remain unchanged"
+    }
+  ]
+}

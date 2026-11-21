@@ -2,7 +2,7 @@ import BlockRoundedIcon from "@mui/icons-material/BlockRounded";
 import { Box, Button, Paper, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import { APP_ROUTES } from "../app/routes";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 
 export function ForbiddenPage() {
   const { t } = useI18n();

@@ -34,13 +34,13 @@ public sealed class SendDeviceCommandCommandValidator : AbstractValidator<SendDe
             RuleFor(x => x.OccupiedBelowCm)
                 .NotNull()
                 .WithMessage(text["validation.command.thresholds.required"])
-                .GreaterThan(0)
+                .InclusiveBetween(2, 400)
                 .WithMessage(text["validation.command.thresholds.positive"]);
 
             RuleFor(x => x.FreeAboveCm)
                 .NotNull()
                 .WithMessage(text["validation.command.thresholds.required"])
-                .GreaterThan(0)
+                .InclusiveBetween(2, 400)
                 .WithMessage(text["validation.command.thresholds.positive"]);
 
             RuleFor(x => x)

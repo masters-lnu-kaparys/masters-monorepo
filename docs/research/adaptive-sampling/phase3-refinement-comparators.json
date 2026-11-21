@@ -1,0 +1,11 @@
+{
+  "version": "C3-extra-comparators-v1",
+  "fresh_check_outcomes_seen_when_written": false,
+  "C3_training_and_grid_altered": false,
+  "purpose": "Check whether a pause guard alone or a simple observed-run backoff explains any improvement attributed to whole-schedule training.",
+  "guarded_C2": "all original 64 full C2 rules, occupied pauses capped at 60, free pauses capped at 75/90/120 seconds; parameters selected only on original128",
+  "backoff": "free interval 15/30/45/60 until observed run reaches 60/300/900/3600 seconds, then 75/90/120; occupied interval 30/45/60; 144 causal rules, selected only on original128",
+  "selection": "original strict F/O/M60 constraints and minimum calls; fallback fixed60",
+  "fresh_check": "same frozen 512-bay cohort and 10 phases as C3; >=7-day and >=1-day windows; no retuning",
+  "status": "Additional diagnostic controls declared before the new development check; no alteration to the original primary selection conditions."
+}

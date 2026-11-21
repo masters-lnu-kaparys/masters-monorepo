@@ -1,0 +1,35 @@
+{
+  "createdOn": "2026-11-01",
+  "frozenArtifactsVerified": 191,
+  "researchRefitted": false,
+  "independentNewEffectEstimate": false,
+  "frozenResultsSha256": "b97bdfcf647e463b632677991b6f89e4fb20eb67e7ea783dfa3a35f539c5d42c",
+  "exporterSha256": "eca4dd6e4503169699c6ad39af2a111759e5fd11dca2c7012ff0165910cd8d0b",
+  "files": {
+    "frontend/public/data/sampling-demo.json": "16ba030655b375156583e3a23d1c7fba96af97a13711a30cb44734cffdab5ba5",
+    "frontend/tests/fixtures/sampling-demo-golden.json": "3fcbfa1550e3094ebf6b5213a0d8953659faab742b540ef2ef9b43293118a9f2"
+  },
+  "selection": "First SHA256-ranked window, first distinct local-history bay, first distinct fallback bay; no outcome filter",
+  "scenarios": [
+    {
+      "id": "6780afeca3d3dda9f5ad5439",
+      "bayId": 1315,
+      "hasLocalHistory": true
+    },
+    {
+      "id": "ca7ce1c565813771bf04344d",
+      "bayId": 5569,
+      "hasLocalHistory": true
+    },
+    {
+      "id": "1b39fdfd4f7208d8540d3fa6",
+      "bayId": 5828,
+      "hasLocalHistory": false
+    }
+  ],
+  "verificationVectors": {
+    "assignments": 867,
+    "contexts": 384,
+    "traces": 3
+  }
+}

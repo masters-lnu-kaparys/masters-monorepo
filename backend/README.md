@@ -23,13 +23,13 @@ The demo works in hybrid mode:
 
 - .NET SDK `9.0.100`
 - SQL Server / LocalDB
-- Node.js `20.19+` or `22.12+`
+- Node.js `22.13+` (verified on `22.23.2`; required for the test runner)
 
 ## Build
 
 ```powershell
 cd .\backend
-dotnet build Masters.Api.sln -tl
+dotnet build Masters.Api.sln -tl /p:UseArtifactsOutput=false
 ```
 
 ## Database setup
@@ -135,7 +135,7 @@ dotnet run
 
 Main config keys:
 
-- `ConnectionStrings:Masters.ApiDb`
+- `ConnectionStrings:DefaultConnection`
 - `RealtimeEventHub:Enabled`
 - `RealtimeEventHub:ConnectionString`
 - `RealtimeEventHub:EventHubName`
@@ -258,7 +258,7 @@ Backend:
 
 ```powershell
 cd .\backend
-dotnet test .\tests\Application.UnitTests\Application.UnitTests.csproj -tl /p:SkipNSwag=True
+dotnet test .\tests\Application.UnitTests\Application.UnitTests.csproj /p:UseArtifactsOutput=false
 ```
 
 Frontend build check:

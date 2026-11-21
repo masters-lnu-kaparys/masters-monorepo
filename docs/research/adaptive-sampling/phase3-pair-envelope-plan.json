@@ -1,0 +1,19 @@
+{
+  "created_on": "2026-10-25",
+  "version": "C4-training-pair-envelope-v1",
+  "phase": 3,
+  "status": "exploratory_author_modification_after_null_constraint_ablation",
+  "prior_validation_outcomes_known": "Original tuning128, refinement512 and duration-audit256 results are already known. These are development experiments, not a new blind test.",
+  "analytical_difference": "Choose a free-state pause envelope from the sum of two consecutive recorded durations: occupied B followed by an eligible free episode D >= tau. If occupied pauses <= tau and free pauses <= G, every fully missed eligible episode requires B+D<G.",
+  "tau_seconds": 60,
+  "training_data": "Same 256 C3 train_development BayIds, Jan-Jun, primary windows >=7 days only; no validation outcomes used to choose G",
+  "free_cap_rule": "G = min(120, minimum B+D over all complete adjacent occupied/free pairs with D>=60 and an earlier free interval in the window). If no eligible pair, conservative fallback G=60.",
+  "training_empirical_risk_budget": 0,
+  "policy_template": "Freeze the existing C3 without_time lookup; replace only its long-free-run plateau of 75 seconds by G. Free startup stays 30/45 seconds; occupied lookup stays 30/60 seconds. No new coordinate search, hyperparameter grid or best-G selection on validation.",
+  "controls": ["fixed60", "unchanged C3 without_time with plateau75", "previously selected simple backoff where its saved results are available"],
+  "evaluation": "Previously used development tuning128 and check cohorts256/512, same10 initial phases, primary>=7days plus sensitivity>=1day; all results reported even if worse",
+  "additional_certificate": "Count risky adjacent pairs independently of the 10 replay phases. Zero on a complete recorded window certifies no missed >=60s free episode for every admissible sampling phase within that window; positive count is an upper bound, not a predicted miss count.",
+  "success_rule": "Retain as a candidate only if C4 reduces calls versus fixed60, passes original F/O/M60 conditions on both check cohorts and window criteria, and gives a strictly smaller trace risk bound than plateau75. This is not evidence of global novelty or a guarantee for unseen physical trajectories.",
+  "phase4_gate_remains_closed": true,
+  "final_test_access": false
+}

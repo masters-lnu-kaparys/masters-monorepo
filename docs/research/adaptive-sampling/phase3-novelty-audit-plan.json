@@ -1,0 +1,22 @@
+{
+  "version": "duration-selective-learning-audit-v1",
+  "created_on": "2026-10-25",
+  "scope": "phase3_author_contribution_audit_not_final_test",
+  "prior_outcomes_known": "All phase3 and C3 refinement results through 2026-10-18, including the 128 tuning and 512 development-check bays.",
+  "hypothesis": "An explicit constraint on completely missed free episodes of a chosen duration adds information not captured by two display-error durations or a total count of missed episodes/transitions.",
+  "what_is_not_claimed_new": ["adaptive sampling", "observed-run features", "coordinate search", "missed-event counting", "generic constrained policy optimization"],
+  "matched_ablation": ["display_errors_only", "total_missed_episodes", "missed_episodes_at_least_60_seconds"],
+  "same_training_data": "original C3 256 BayIds from train_development Jan-Jun, 3 shared start phases",
+  "same_policy_family": "C3 without_time, 12 effective state/observed-run groups, unchanged action grids, starts at fixed60, 2 coordinate sweeps",
+  "same_hyperparameters": "lambda_F and lambda_O in [0.25,1,4], post-fit free cap in [75,90,120]",
+  "selection_data": "original 128 development BayIds, 10 shared start phases",
+  "selection_each_ablation": "training and tuning F/O no worse than fixed60; each arm obeys only its declared episode constraint; minimize measurements then F/O then numeric parameters. Missing episode metrics always reported for every arm.",
+  "primary_original_quality_conditions_weakened": false,
+  "new_check": "256 unreserved primary-validation BayIds, SHA256 order with masters-parking-duration-audit-v1:, excluding old128, old512 and all166 pilot-prefix BayIds",
+  "new_check_repetitions": 10,
+  "sensitivity": "same frozen rules and BayIds, windows >=1 day, no retuning",
+  "analytical_fixtures": ["equal F/O and transition counts but different missed-duration profiles", "exact additive interval accounting with end-inclusive miss boundary", "finite replay zero misses is not a distribution-free no-miss guarantee"],
+  "success_rule_for_mechanism": "The protected arm has fewer M60 misses than both matched controls on the new check; report resource/error tradeoff and any failures. No claim that this alone proves global novelty.",
+  "phase4_gate": "closed_until_supported_author_improvement_and_literature_distinction_are_documented",
+  "final_test_access": false
+}

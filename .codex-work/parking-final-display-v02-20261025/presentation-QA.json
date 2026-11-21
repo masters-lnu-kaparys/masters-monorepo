@@ -1,0 +1,12 @@
+{
+  "created_on": "2026-10-25",
+  "figures_viewed": [
+    "phase4-display-results.png",
+    "phase4-resource-errors.png",
+    "phase4-timeline.png"
+  ],
+  "visual_QA_passed": true,
+  "notes": "All titles, labels, legends and intervals readable; timeline showing a worse individual detection is retained. Frozen analysis figure unchanged.",
+  "verification_sha256": "730babb6702264fb5543514d74d3d3133e6fab7d9d08962da05dec20c7d6dfe5",
+  "frozen_entry_valid": true
+}

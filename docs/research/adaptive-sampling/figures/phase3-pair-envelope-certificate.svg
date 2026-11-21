@@ -1,0 +1,291 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg xmlns:xlink="http://www.w3.org/1999/xlink" width="921.6pt" height="388.8pt" viewBox="0 0 921.6 388.8" xmlns="http://www.w3.org/2000/svg" version="1.1">
+ <metadata>
+  <rdf:RDF xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:cc="http://creativecommons.org/ns#" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
+   <cc:Work>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:date>2026-10-25T15:47:19.390504</dc:date>
+    <dc:format>image/svg+xml</dc:format>
+    <dc:creator>
+     <cc:Agent>
+      <dc:title>Matplotlib v3.11.2, https://matplotlib.org/</dc:title>
+     </cc:Agent>
+    </dc:creator>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <defs>
+  <style type="text/css">*{stroke-linejoin: round; stroke-linecap: butt}</style>
+ </defs>
+ <g id="figure_1">
+  <g id="patch_1">
+   <path d="M 0 388.8 
+L 921.6 388.8 
+L 921.6 0 
+L 0 0 
+z
+" style="fill: #ffffff"/>
+  </g>
+  <g id="axes_1">
+   <g id="patch_2">
+    <path d="M 130.12 327.237656 
+L 540.183256 327.237656 
+L 540.183256 89.960938 
+L 130.12 89.960938 
+z
+" style="fill: #ffffff"/>
+   </g>
+   <g id="matplotlib.axis_1">
+    <g id="xtick_1">
+     <g id="line2d_1">
+      <path d="M 130.12 327.237656 
+L 130.12 89.960938 
+" clip-path="url(#pd91a6b437f)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.15; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_2">
+      <defs>
+       <path id="me6a3f5222e" d="M 0 0 
+L 0 3.5 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#me6a3f5222e" x="130.12" y="327.237656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_1">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="130.12" y="341.835313" transform="rotate(-0 130.12 341.835313)">0</text>
+     </g>
+    </g>
+    <g id="xtick_2">
+     <g id="line2d_3">
+      <path d="M 198.463876 327.237656 
+L 198.463876 89.960938 
+" clip-path="url(#pd91a6b437f)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.15; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_4">
+      <g>
+       <use xlink:href="#me6a3f5222e" x="198.463876" y="327.237656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_2">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="198.463876" y="341.835313" transform="rotate(-0 198.463876 341.835313)">1</text>
+     </g>
+    </g>
+    <g id="xtick_3">
+     <g id="line2d_5">
+      <path d="M 266.807752 327.237656 
+L 266.807752 89.960938 
+" clip-path="url(#pd91a6b437f)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.15; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_6">
+      <g>
+       <use xlink:href="#me6a3f5222e" x="266.807752" y="327.237656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_3">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="266.807752" y="341.835313" transform="rotate(-0 266.807752 341.835313)">2</text>
+     </g>
+    </g>
+    <g id="xtick_4">
+     <g id="line2d_7">
+      <path d="M 335.151628 327.237656 
+L 335.151628 89.960938 
+" clip-path="url(#pd91a6b437f)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.15; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_8">
+      <g>
+       <use xlink:href="#me6a3f5222e" x="335.151628" y="327.237656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_4">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="335.151628" y="341.835313" transform="rotate(-0 335.151628 341.835313)">3</text>
+     </g>
+    </g>
+    <g id="xtick_5">
+     <g id="line2d_9">
+      <path d="M 403.495504 327.237656 
+L 403.495504 89.960938 
+" clip-path="url(#pd91a6b437f)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.15; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_10">
+      <g>
+       <use xlink:href="#me6a3f5222e" x="403.495504" y="327.237656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_5">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="403.495504" y="341.835313" transform="rotate(-0 403.495504 341.835313)">4</text>
+     </g>
+    </g>
+    <g id="xtick_6">
+     <g id="line2d_11">
+      <path d="M 471.83938 327.237656 
+L 471.83938 89.960938 
+" clip-path="url(#pd91a6b437f)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.15; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_12">
+      <g>
+       <use xlink:href="#me6a3f5222e" x="471.83938" y="327.237656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_6">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="471.83938" y="341.835313" transform="rotate(-0 471.83938 341.835313)">5</text>
+     </g>
+    </g>
+    <g id="xtick_7">
+     <g id="line2d_13">
+      <path d="M 540.183256 327.237656 
+L 540.183256 89.960938 
+" clip-path="url(#pd91a6b437f)" style="fill: none; stroke: #b0b0b0; stroke-opacity: 0.15; stroke-width: 0.8; stroke-linecap: square"/>
+     </g>
+     <g id="line2d_14">
+      <g>
+       <use xlink:href="#me6a3f5222e" x="540.183256" y="327.237656" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_7">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="540.183256" y="341.835313" transform="rotate(-0 540.183256 341.835313)">6</text>
+     </g>
+    </g>
+    <g id="text_8">
+     <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: middle" x="335.151628" y="355.836094" transform="rotate(-0 335.151628 355.836094)">Повні пари з D ≥ 60 с та B + D &lt; 75 с</text>
+    </g>
+   </g>
+   <g id="matplotlib.axis_2">
+    <g id="ytick_1">
+     <g id="line2d_15">
+      <defs>
+       <path id="m96de91335b" d="M 0 0 
+L -3.5 0 
+" style="stroke: #000000; stroke-width: 0.8"/>
+      </defs>
+      <g>
+       <use xlink:href="#m96de91335b" x="130.12" y="117.455871" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_9">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="123.12" y="121.340246" transform="rotate(-0 123.12 121.340246)">256 місць, від 7 діб</text>
+     </g>
+    </g>
+    <g id="ytick_2">
+     <g id="line2d_16">
+      <g>
+       <use xlink:href="#m96de91335b" x="130.12" y="178.218155" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_10">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="123.12" y="182.10253" transform="rotate(-0 123.12 182.10253)">256 місць, від 1 доби</text>
+     </g>
+    </g>
+    <g id="ytick_3">
+     <g id="line2d_17">
+      <g>
+       <use xlink:href="#m96de91335b" x="130.12" y="238.980439" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_11">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="123.12" y="242.864814" transform="rotate(-0 123.12 242.864814)">512 місць, від 7 діб</text>
+     </g>
+    </g>
+    <g id="ytick_4">
+     <g id="line2d_18">
+      <g>
+       <use xlink:href="#m96de91335b" x="130.12" y="299.742723" style="stroke: #000000; stroke-width: 0.8"/>
+      </g>
+     </g>
+     <g id="text_12">
+      <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: end" x="123.12" y="303.627098" transform="rotate(-0 123.12 303.627098)">512 місць, від 1 доби</text>
+     </g>
+    </g>
+   </g>
+   <g id="patch_3">
+    <path d="M 130.12 100.746243 
+L 198.463876 100.746243 
+L 198.463876 134.165499 
+L 130.12 134.165499 
+z
+" clip-path="url(#pd91a6b437f)" style="fill: #0891b2"/>
+   </g>
+   <g id="patch_4">
+    <path d="M 130.12 161.508527 
+L 471.83938 161.508527 
+L 471.83938 194.927783 
+L 130.12 194.927783 
+z
+" clip-path="url(#pd91a6b437f)" style="fill: #0891b2"/>
+   </g>
+   <g id="patch_5">
+    <path d="M 130.12 222.270811 
+L 198.463876 222.270811 
+L 198.463876 255.690067 
+L 130.12 255.690067 
+z
+" clip-path="url(#pd91a6b437f)" style="fill: #0891b2"/>
+   </g>
+   <g id="patch_6">
+    <path d="M 130.12 283.033095 
+L 335.151628 283.033095 
+L 335.151628 316.452351 
+L 130.12 316.452351 
+z
+" clip-path="url(#pd91a6b437f)" style="fill: #0891b2"/>
+   </g>
+   <g id="patch_7">
+    <path d="M 130.12 327.237656 
+L 130.12 89.960938 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="patch_8">
+    <path d="M 130.12 327.237656 
+L 540.183256 327.237656 
+" style="fill: none; stroke: #000000; stroke-width: 0.8; stroke-linejoin: miter; stroke-linecap: square"/>
+   </g>
+   <g id="text_13">
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="205.298264" y="120.053527" transform="rotate(-0 205.298264 120.053527)">1</text>
+   </g>
+   <g id="text_14">
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="478.673767" y="180.815811" transform="rotate(-0 478.673767 180.815811)">5</text>
+   </g>
+   <g id="text_15">
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="205.298264" y="241.578095" transform="rotate(-0 205.298264 241.578095)">1</text>
+   </g>
+   <g id="text_16">
+    <text style="font-size: 10px; font-family: 'DejaVu Sans'; text-anchor: start" x="341.986016" y="302.340379" transform="rotate(-0 341.986016 302.340379)">3</text>
+   </g>
+   <g id="text_17">
+    <text style="font-size: 11px; font-family: 'DejaVu Sans'; text-anchor: middle" x="335.151628" y="83.960938" transform="rotate(-0 335.151628 83.960938)">75 с: додатна верхня межа ризикових епізодів</text>
+   </g>
+  </g>
+  <g id="axes_2">
+   <g id="text_18">
+    <text style="font-weight: 700; font-size: 19px; font-family: 'DejaVu Sans'; text-anchor: start; fill: #7c3aed" x="575.61786" y="123.179678" transform="rotate(-0 575.61786 123.179678)">72 с: 0 таких пар</text>
+   </g>
+   <g id="text_19">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'" transform="translate(575.61786 134.737209)">За паузи після «зайнято» не більше 60 с</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'" transform="translate(575.61786 152.634084)">це виключає повний пропуск хвилинного</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'" transform="translate(575.61786 170.635022)">звільнення на цих записаних траєкторіях.</text>
+   </g>
+   <g id="text_20">
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'" transform="translate(575.61786 228.563572)">Умова стосується всіх зсувів розкладу,</text>
+    <text style="font-size: 12px; font-family: 'DejaVu Sans'" transform="translate(575.61786 246.563572)">а не лише десяти перевірених.</text>
+   </g>
+   <g id="text_21">
+    <text style="font-size: 10.5px; font-family: 'DejaVu Sans'; fill: #475569" transform="translate(575.61786 269.451403)">Додатна межа для 75 с не означає, що C3</text>
+    <text style="font-size: 10.5px; font-family: 'DejaVu Sans'; fill: #475569" transform="translate(575.61786 284.06445)">обов’язково пропустить ці епізоди.</text>
+    <text style="font-size: 10.5px; font-family: 'DejaVu Sans'; fill: #475569" transform="translate(575.61786 298.76445)">Гарантії для невідомого майбутнього немає.</text>
+   </g>
+  </g>
+  <g id="text_22">
+   <text style="font-size: 15px; font-family: 'DejaVu Sans'; text-anchor: middle" x="460.8" y="23.061656" transform="rotate(-0 460.8 23.061656)">Чим аналітична перевірка відрізняється від десяти повторів</text>
+  </g>
+  <g id="text_23">
+   <text style="font-size: 9px; font-family: 'DejaVu Sans'; text-anchor: middle; fill: #475569" x="460.8" y="381.024" transform="rotate(-0 460.8 381.024)">Пари пораховано один раз на повному вікні. Вікна від 1 доби включають вікна від 7 діб.</text>
+  </g>
+ </g>
+ <defs>
+  <clipPath id="pd91a6b437f">
+   <rect x="130.12" y="89.960938" width="410.063256" height="237.276719"/>
+  </clipPath>
+ </defs>
+</svg>

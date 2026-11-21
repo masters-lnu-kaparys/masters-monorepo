@@ -2,3 +2,8 @@
 /backend/src/Worker/appsettings.Development.json
 /frontend/.env
 **/objtemp/
+/sketch_dec15a/device_secrets.h
+/.codex-work/
+/.playwright-mcp/
+/docs/delivery/*.pdf
+__pycache__/

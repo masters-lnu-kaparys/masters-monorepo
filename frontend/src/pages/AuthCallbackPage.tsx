@@ -3,7 +3,7 @@ import { Navigate } from "react-router-dom";
 import { APP_ROUTES } from "../app/routes";
 import { FullScreenStatus } from "../components/FullScreenStatus";
 import { AUTH_CALLBACK_PATH, hasAuthCallbackParams } from "../auth/config";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 
 type AuthCallbackPageProps = {
   fallbackTo?: string;

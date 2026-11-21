@@ -1,0 +1,14 @@
+{
+  "created_on": "2026-10-25",
+  "version": "post-primary-coverage-controlled-annex-v1",
+  "timing": "Declared AFTER primary matched-budget outcomes were read, BEFORE fitting or replaying this annex. Explicit exploratory follow-up, not a preplanned confirmatory result.",
+  "reason": "Primary simple controls have close F/O but larger M60. Original phase3 requirements include coverage. Also allow simple controls the same previously trained72-second pause as C4, avoiding a candidate-only action advantage.",
+  "bank": "Preserve all269 primary definitions/results. Add27 state-only schedules from the14x14 grid BASE_ACTIONS union{72} that were absent; add30 two-stage schedules with free plateau72 and all other parameters identical to primary family. Total326 definitions including frozen C3/C4. S2 unchanged.",
+  "comparisons": "Refit the five control-family mixtures for each target using the SAME four train/tune cells and same minimax F/O objective/resource caps as primary. Additionally constrain expected control M60<=target M60 in EACH fitting cell. Freeze weights before the annex check replays. All previous check outcomes are known.",
+  "check": "Existing check256/check512, both windows,10 phases. Report frozen mixtures' F/O/resource/M60; an annex control violating resource or M60 at a check is not an admissible improvement. Separately solve a clearly labeled hindsight envelope with exact expected target resource AND M60<=target M60 on that check. It remains optimistic and nonconfirmatory.",
+  "uncertainty": "Same descriptive paired whole-BayId bootstrap,2000 draws,seed20261025, for frozen mixtures only; conditional on fitted models, not simultaneous or selection-adjusted.",
+  "interpretation": "A larger coverage-constrained error envelope quantifies the resource/quality cost of M60 within this bank. It does not establish that users require every60-second vacancy to be observed, nor physical accuracy, battery savings, universal guarantees or world novelty. Keep primary results and explicitly disclose post-primary timing.",
+  "final_test_access": false,
+  "new_check_cohort_access": false,
+  "phase4_may_start": false
+}

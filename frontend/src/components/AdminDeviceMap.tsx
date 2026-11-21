@@ -4,7 +4,7 @@ import type { LatLngBoundsExpression, LatLngExpression } from "leaflet";
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer, useMap } from "react-leaflet";
 import type { AdminDetectedDevice, AdminParkingLot } from "../types/api";
 import { SPOT_SOURCE } from "../types/api";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 
 const DEVICE_ZONE_RADIUS_KM = 0.2;
 const DEVICE_ZONE_RADIUS_METERS = DEVICE_ZONE_RADIUS_KM * 1000;

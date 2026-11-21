@@ -1,0 +1,135 @@
+{
+  "createdOn": "2026-11-01",
+  "phase5DemoComplete": true,
+  "physicalDeviceIntegration": false,
+  "researchRefitted": false,
+  "unitTests": {
+    "passed": 9,
+    "failed": 0,
+    "assignmentVectors": 867,
+    "contextVectors": 384,
+    "goldenTraces": 3
+  },
+  "browserChecks": {
+    "productionPreview": "http://127.0.0.1:5178/measurements",
+    "scenarios": [
+      {
+        "bayId": 1315,
+        "metrics": {
+          "calls": 10,
+          "falseFreeSeconds": 0,
+          "falseOccupiedSeconds": 85
+        },
+        "csv": "measurements-1315-2019-12-02.csv",
+        "expectedCsvRows": 23,
+        "csvExactMatch": true
+      },
+      {
+        "bayId": 5569,
+        "metrics": {
+          "calls": 13,
+          "falseFreeSeconds": 16,
+          "falseOccupiedSeconds": 11
+        },
+        "csv": "measurements-5569-2019-12-06.csv",
+        "expectedCsvRows": 26,
+        "csvExactMatch": true
+      },
+      {
+        "bayId": 5828,
+        "metrics": {
+          "calls": 23,
+          "falseFreeSeconds": 28,
+          "falseOccupiedSeconds": 2
+        },
+        "csv": "measurements-5828-2019-12-07.csv",
+        "expectedCsvRows": 36,
+        "csvExactMatch": true
+      }
+    ],
+    "assertions": [
+      "Branded title in production",
+      "Full excerpt: 1315",
+      "Rendered counters equal Python: 1315",
+      "No measurements past the right endpoint",
+      "CSV download: 1315",
+      "Full excerpt: 5569",
+      "Rendered counters equal Python: 5569",
+      "No measurements past the right endpoint",
+      "CSV download: 5569",
+      "Full excerpt: 5828",
+      "Rendered counters equal Python: 5828",
+      "No measurements past the right endpoint",
+      "CSV download: 5828",
+      "Shared-history fallback is explained",
+      "All eleven candidate pauses are explained",
+      "Exactly one selected pause",
+      "Primary study result is shown separately",
+      "Restart resets the replay",
+      "Pause stops the clock",
+      "Step advances to an actual adaptive measurement",
+      "Mobile page has no body overflow",
+      "English translation works",
+      "No untranslated keys",
+      "Load error is explained",
+      "Retry successfully loads the data",
+      "No JavaScript page exceptions",
+      "Demo makes no API, identity-provider or IoT requests"
+    ],
+    "pageErrors": [],
+    "unexpectedRequests": [],
+    "success": true,
+    "csvVerifiedAgainstPython": true
+  },
+  "frontendProductionBuild": {
+    "passed": true,
+    "warnings": [
+      "existing SignalR pure annotation warnings",
+      "main bundle exceeds 500 kB"
+    ]
+  },
+  "apiBuild": {
+    "passed": true,
+    "command": "dotnet build backend/Masters.Api.sln -tl /p:UseArtifactsOutput=false",
+    "warnings": [
+      "AutoMapper 13.0.1 NU1903",
+      "duplicate EF targets MSB4011"
+    ]
+  },
+  "changedFilesEslint": {
+    "passed": true
+  },
+  "repositoryEslint": {
+    "passed": false,
+    "unchangedFilesWithExistingErrors": [
+      "frontend/src/auth/useEffectiveRoles.ts:43 react-hooks/set-state-in-effect",
+      "frontend/src/i18n/LanguageProvider.tsx:36 react-refresh/only-export-components"
+    ]
+  },
+  "frozenResearchFilesVerified": 191,
+  "thesis": {
+    "updatedSections": [
+      "5.6",
+      "ВИСНОВКИ"
+    ],
+    "pdfPagesBeforeTocRefresh": 58,
+    "renderedLayoutVerified": true,
+    "tocRefreshPending": true
+  },
+  "implementationSha256": {
+    "frontend/index.html": "55413f5436fabd0740185105c68dc74988275d361c1e84e3c358db86431e2124",
+    "frontend/package.json": "f991a42e051c2f721bb6ffaf4ca5fe2a482f8e4b125844c7b63523d1aa1ed0ff",
+    "frontend/src/main.tsx": "0138abd5b481b27b048bdfe04f3d56448de09bcc0f9e122763f6c78aa51973e5",
+    "frontend/src/app/routes.ts": "067282ba8afd69297af27ac9f5a9ccf25af49377bf8cece164588bad0754d736",
+    "frontend/src/components/AppShell.tsx": "8f0c38931d2bc9fb8fddb1ce97a601a59c4926bb2f1bd2ed76605eaa44980ad2",
+    "frontend/src/i18n/messages.ts": "937e73dfaf55e8f3a6b9ae8713971cab48da8859d21d098b8053f397f12ff4ac",
+    "frontend/src/pages/SamplingDemoPage.tsx": "98ef2dce38c9802a60ce67a6daab74d61b6cf69214a734ab2af3c54c62b92f45",
+    "frontend/src/sampling/messages.ts": "cca7db253c09818b47da4bedecfed060850a935dc8978e5c690b3275d7b78338",
+    "frontend/src/sampling/policy.ts": "4019d48456d5d082b089681999934f97ad1db91d5c7f36173deea8b48b446c88",
+    "frontend/src/sampling/replay.ts": "e33b9644cad944cc130507106291400842df39f0bd11eb8dff355f7b6f5bbba2",
+    "frontend/src/sampling/SamplingTimeline.tsx": "187194b60988ea697bdd93d56449c8807854a283805379fe5d4038bf8d027e55",
+    "frontend/src/sampling/types.ts": "9ede7c9700bdbab2cb4f5f683e32484b0c2298e6294775c8dd361e638b9cd0c3",
+    "frontend/tests/sampling.test.mjs": "646767a2aa704d49d4aa2bc183902b44b7fbc4c15632321e31c5cb25877fb679",
+    "research/parking_sampling/export_demo.py": "eca4dd6e4503169699c6ad39af2a111759e5fd11dca2c7012ff0165910cd8d0b"
+  }
+}

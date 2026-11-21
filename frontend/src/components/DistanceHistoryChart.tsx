@@ -1,5 +1,5 @@
 import { Box, Stack, Typography } from "@mui/material";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 import type { SpotHistoryPoint } from "../types/api";
 
 type DistanceHistoryChartProps = {

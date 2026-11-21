@@ -6,6 +6,29 @@ public class TelemetryPayloadParserTests
 {
     private readonly TelemetryPayloadParser _parser = new();
 
+    [TestCase("[]")]
+    [TestCase("42")]
+    [TestCase("null")]
+    [TestCase("{\"deviceId\":\"spot\",\"ts\":9223372036854775807,\"distanceCm\":20,\"occupied\":true}")]
+    [TestCase("{\"deviceId\":\"spot\",\"ts\":1735689600,\"distanceCm\":\"NaN\",\"occupied\":true}")]
+    [TestCase("{\"deviceId\":\"spot\",\"ts\":1735689600,\"distanceCm\":\"Infinity\",\"occupied\":true}")]
+    [TestCase("{\"deviceId\":\"spot\",\"ts\":1735689600,\"distanceCm\":-10,\"occupied\":true}")]
+    [TestCase("{\"deviceId\":\"spot\",\"ts\":1735689600,\"distanceCm\":401,\"occupied\":true}")]
+    public void ShouldRejectInvalidRecordsWithoutThrowing(string payload)
+    {
+        _parser.TryParse(payload, out var message).ShouldBeFalse();
+        message.ShouldBeNull();
+    }
+
+    [TestCase(null, false)]
+    [TestCase("other-device", false)]
+    [TestCase("spot", true)]
+    public void ShouldRequireAuthenticatedDeviceIdentity(string? authenticatedId, bool expected)
+    {
+        const string payload = "{\"deviceId\":\"spot\",\"ts\":1735689600,\"distanceCm\":20,\"occupied\":true}";
+        _parser.TryParseFromDevice(payload, authenticatedId, out _).ShouldBe(expected);
+    }
+
     [Test]
     public void ShouldParseValidPayload()
     {

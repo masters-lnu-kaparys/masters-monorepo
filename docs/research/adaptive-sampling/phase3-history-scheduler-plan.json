@@ -1,0 +1,36 @@
+{
+  "created_on": "2026-10-25",
+  "version": "C5-history-certificate-construction-v1",
+  "scope": "Phase3 construction experiment; no final-test access and no automatic novelty claim",
+  "known_before_fit": "All C3/C4 and stability results are known. July-September tuning128 and previous check256/check512 are development data. No fresh check will be opened in this experiment.",
+  "question": "Can the history-conditioned path bound construct a useful scheduler, rather than only retrospectively verify a frozen one?",
+  "calibration": {
+    "bays": "Original256 C3 training BayIds, Jan-June train_development",
+    "windows": "All retained known windows>=1day, including primary>=7day windows; no masked-gap crossing",
+    "tau_seconds": 60,
+    "long_pauses_seconds": [75, 90, 120],
+    "rule": "For each G compute r=max(window_start, d-tau over previous occupied intervals of duration>=G). Among complete free episodes D>=tau with preceding occupied start p and B+D<G, take A_required(G)=max(300,max(p-r)). An empty set gives300. Equality is safe because a miss requires p-r>A. Calibration uses recorded training intervals only.",
+    "guarantee_scope": "Zero history bound on these recorded calibration windows for every valid initial start under the stated ideal observation assumptions; no guarantee for unseen records or physical sensors"
+  },
+  "candidate_family": {
+    "age_grid_seconds": [300, 900, 1800, 3600, 14400, 86400],
+    "additional_ages": "A_required(G), computed only from training; deduplicate exact schedules",
+    "C3_shape": "After free:30 if observed run age<300,45 if300<=age<A,else G. After occupied:30 if age<300,else60. A>=300.",
+    "simple_shape": "After free:45 if observed run age<A,else G. After occupied:60. This is a matched, simpler comparator with the same G/A choices.",
+    "arms": ["unrestricted: all candidates", "history_guard: only A>=A_required(G)"],
+    "additional_controls": ["fixed60", "unchanged C3/75 (A900)", "unchanged C4/72 (A900)", "simple45->75 after900, occupied60"]
+  },
+  "evaluation": {
+    "train": "Original256 Jan-June, both>=7day and>=1day,3 common initial phases",
+    "tuning": "Original128 July-September, both>=7day and>=1day,10 common initial phases",
+    "quality_filter": "In each of four train/tune/window cells require F<=fixed60 F, O<=fixed60 O, and M60<=fixed60 M60. M60 is in-episode observation coverage, not a wholly wrong displayed vacancy.",
+    "selection": "For each arm/shape and each pooled arm choose the admissible candidate minimizing mean tuning samples/fixed60 samples across the two window criteria; ties by sum normalized F, then O, G,A,name. If none, fixed60. Equal source duration and phases within each cell.",
+    "predeclared_usefulness_gate": "A history_guard winner must be different from fixed60 and beat frozen C3's sample reduction by at least1 percentage point in all four cells while preserving the fixed60 quality filter. Only then may a separately locked fresh-check experiment be proposed; this experiment will not open one.",
+    "mechanism_check": "Compare selected unrestricted and guarded candidates and their training history bounds. Identical winners mean no isolated empirical benefit of adding the guard. A smaller bound alone is an analytical property, not proof of improved map accuracy or resource efficiency.",
+    "failure_handling": "If the guard only adds observations or candidates fail the quality filter/usefulness gate, record the negative result. Do not tune G/A against previous check256/check512, relax criteria, or switch topic automatically."
+  },
+  "implementation": "New arbitrary-age deterministic kernel, independently compared with reference_simulate; frozen previous kernels/results left intact. A new runtime policy uses only observed state and observed-run age, never true unsampled intervals.",
+  "sources": "S1 frequency/quality tradeoff; S2 causal state observation; S8 event-coverage metrics; S12 missed intermediate events; own H.1-H.3 bound in phase3-history-bound-method.md. General adaptive sampling is prior art. Exact theorem and construction originality are under review.",
+  "final_test_access": false,
+  "phase4_may_start": false
+}

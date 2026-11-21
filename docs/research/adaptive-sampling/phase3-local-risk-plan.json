@@ -1,0 +1,30 @@
+{
+  "created_on": "2026-10-25",
+  "version": "local-time-integrated-risk-v1",
+  "scope": "Phase3 practical scheduler investigation, no final-test access, no claim of new generic optimization or personalization",
+  "known_before_work": "All C0-C5, matched-budget, analytic and all-start-verification results are known. C3/C4 are limited by global tables; their small coverage gains do not establish better map performance. This new candidate's model and outcomes are not yet evaluated.",
+  "hypothesis": "A pooled sampled-history cost table masks stable heterogeneity across parking bays. Shrinking a bay/context estimate toward pooled context and bay-state priors may reduce measurements at the same false-free/false-occupied map-time budgets, while controlling small-sample instability.",
+  "runtime": "At each paid measurement observe state, clock and observed-run start. Look up the bay-specific context/action expected wrong-display seconds; choose d minimizing(1+lambda_s*expected_wrong_seconds)/d. This is a local rate surrogate, NOT a global-optimality claim. No free access to unsampled occupancy. Maximum pause300seconds.",
+  "model": {
+    "contexts": "2 sampled states x4 civil6hour clock bins x6 observed-run age bins[60,300,900,3600,14400]. No true sojourn age.",
+    "actions_seconds": [15,30,45,60,72,75,90,120,180,240,300],
+    "teachers": "Constant30,60,300second causal sampled histories; labels at900second anchors. Counterfactual wrong-display cost is the exact integral of the recorded opposite state over[t,t+d). All actions end within the training window. Teachers/anchors correlated; sample count is not independent support.",
+    "global_context_prior": "Global context risk shrunk toward the state-only global risk by50 anchor equivalents.",
+    "bay_state_prior": "Bay state-only risk shrunk toward global state risk by alpha anchor equivalents.",
+    "bay_context_prior": "Average of global context estimate and bay state estimate; bay/context empirical mean shrunk toward this average by alpha.",
+    "alpha_grid": [50,500],
+    "arms": ["pooled_state", "pooled_clock_age", "bay_state_alpha50", "bay_full_alpha0", "bay_full_alpha50", "bay_full_alpha500"],
+    "unsupported": "For missing bay/context support use the corresponding pooled prior; unseen bays use the pooled context model. Never return an artificial zero risk from absent support."
+  },
+  "training_access": "Jan-Jun train_development only, windows>=1day, BayIds equal the UNION of the already used training256/tuning128/check256/check512 IDs. New TRAINING histories of known check IDs may be read after code/plan lock; no new validation cohort or reserved training/validation/final states. Bay histories are training input, not held-out unseen devices. Report training coverage and fallback. Existing S2 uses Jan-Jun histories of4218bays, disclosed separately.",
+  "parameter_grid": {"lambda_F": [0.25,0.5,1,2,4,8,16,32], "lambda_O": [0.25,0.5,1,2,4,8,16,32]},
+  "fitting": "Replay all384 arm/penalty definitions on original training256 Jan-Jun,3 common phases, and tuning128 Jul-Sep,10 common phases, both>=7day and>=1day. Keep by-Bay raw17counters. Within each arm freeze two selections: display-focused(F/O<=fixed60 in all4 fitting cells) and original-strict(add M60<=fixed60 in all4 cells). Minimize mean tuning sample ratio, then total F/O ratios, then numeric penalties. No feasible member=>fixed60 fallback. The original protocol and its failures remain unchanged; display-focused is a separately labeled exploratory diagnostic, never silently promoted as satisfying original-strict.",
+  "controls": "Reuse frozen326-policy expected-budget banks, aligned to identical cohorts/phases. For every selected target fit one mixture across4 fitting cells, limiting expected sample count<=target in each and minimizing worst F/O ratio. Compare separately state-only, two-stage, pooled bank(excludesC3/C4) and matched pooled_clock_age same-estimator arm. For original-strict additionally constrain expectedM60<=target. Freeze mixtures and selected model hashes before new candidate check replays.",
+  "check": "Only already inspected check256/check512, both window criteria,10 common phases. Replay chosen candidates and only new pooled-model constituents needed by frozen controls. Cached old326banks unchanged. Report actual resource mismatch, F/O, all M thresholds, exact expected-budget hindsight envelopes as labeled diagnostic, and paired wholeBayId2000-draw pointwise95% intervals conditional on selected models. No retuning from these outcomes.",
+  "usefulness_gate": "A useful display-focused candidate must reduce calls by>=10% versus fixed60 and have F/O<=fixed60 in EACH of the4 known check cells. Strong-control evidence requires frozen control staying within candidate budget and candidate no worse in BOTH F/O with >=5% lower F or O in at least3of4 cells; report missing admissible comparisons and same-estimator pooling ablation separately. All these are exploratory development gates. An original-strict success also requiresM60=0 in ALL4cells. Failing original-strict while passing display-focused is a tradeoff, not an original-protocol success.",
+  "novelty": "Personalization, shrinkage, context-aware sampling and local cost-rate minimization are established ideas. A scientific contribution would require a precise author modification, isolated measured effect beyond strong controls and qualified prior-art comparison. Positive engineering performance alone cannot certify world novelty. Full paper RL-CamSleep2023 must be reviewed before an originality conclusion.",
+  "negative_result": "Preserve all candidates/results. If this fixed investigation fails practical gates, analyze the failure and continue toward a justified modification without changing this experiment's criteria or presenting tests as the contribution.",
+  "final_test_evaluated": false,
+  "new_check_cohort_opened": false,
+  "phase4_may_start": false
+}

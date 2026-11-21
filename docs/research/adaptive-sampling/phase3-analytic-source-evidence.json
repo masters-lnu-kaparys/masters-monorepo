@@ -1,0 +1,49 @@
+{
+  "created_on": "2026-10-25",
+  "sources": {
+    "S14-Furia-Rossi-2010": {
+      "primary_pdf": "https://arxiv.org/pdf/0911.5642v2",
+      "doi": "https://doi.org/10.1145/1838552.1838560",
+      "pages": 43,
+      "pdf_sha256": "5640c05aacabedd199406cebf0bba7267204a5d1d4e3df72f7fba9882052be77",
+      "text_sha256": "c7704f1faeb64a68959b45aed05a135c007bfd29b334247329d78006be833db7",
+      "download_is_not_read_scope": true,
+      "read": "Abstract, introduction, section2.1, section3.1 definitions11-14, theorem15 statement and proof opening, section4 overview, proposition26 and section4.2 algorithm/incompleteness, sections5.2-5.3",
+      "not_claimed": "Entire43-page proof and all examples independently checked; numerical reproduction",
+      "version_note": "arXiv v2 stamp2010-04-06 and journal2010; PDF generated header2021 is not used as publication year"
+    },
+    "S15-Mehrabian-2023": {
+      "primary_pdf": "https://mpslab-asu.github.io/publications/papers/Mehrabian2023MICPRO.pdf",
+      "doi": "https://doi.org/10.1016/j.micpro.2023.104890",
+      "pages": 18,
+      "pdf_sha256": "45d004631af5d61d6ed0e05feffc74afdbe6511ee36b1fe67d5872c237b99772",
+      "text_sha256": "46cb9248029fc7adcf0362fa44e8d9fb2ba42d933291b0c54cbe3ec77ed61b82",
+      "download_is_not_read_scope": true,
+      "read": "Abstract/introduction; section4.1; section5.1 signal/sampling assumptions; section5.4 guarantee scope; section6.4 opening measurement-error sources",
+      "not_claimed": "Full18-page technical review, independent proof of every TTL rule, or reproduction of hardware experiment"
+    },
+    "S16-Hung-Giang-1996": {
+      "primary_pdf": "https://uet.vnu.edu.vn/~dvh/publications/paper-report50.pdf",
+      "doi": "https://doi.org/10.1007/3-540-61648-9_41",
+      "author_metadata": "https://uet.vnu.edu.vn/~dvh/publications_2.html",
+      "pages": 20,
+      "pdf_sha256": "a6bedf983ae6c1e3bd15e92f4bb7f402194327007dc3a562e04166dd8ea8a52f",
+      "text_sha256": "18b0243d632a36714a88b7ce0e2148805900fe60e37cd10f99ea498cfb61c406",
+      "download_is_not_read_scope": true,
+      "read": "Abstract/introduction; section3 regular-grid semantics, definition1, theorem1 and its proof, corollary1, theorem2 and verification explanation, PDF pages5-8",
+      "not_claimed": "Full20-page review of limit/digitization results or Biphase Mark case study",
+      "version_note": "Author site describes technical report50 from1995 published as LNCS1135 pages188-207 in1996"
+    }
+  },
+  "search_queries": [
+    "sampling runtime verification missed events",
+    "sampling invariance non-Berkeley temporal logic",
+    "state dependent sampling minimum duration event detection",
+    "sampling event duration deterministic missed events",
+    "Furia Rossi sampling invariance adaptive",
+    "Van Hung Giang sampling1996 duration calculus"
+  ],
+  "search_not_exhaustive": true,
+  "S11_abstract_only_status_retained": true,
+  "claim": "Own derived R.3 count; exact equality not found in the explicitly read formulas; not proof of world originality"
+}

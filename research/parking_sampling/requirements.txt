@@ -1,0 +1,6 @@
+duckdb==1.5.6
+matplotlib==3.11.2
+numpy==2.3.5
+scipy==1.18.1
+numba==0.68.0
+llvmlite==0.50.0

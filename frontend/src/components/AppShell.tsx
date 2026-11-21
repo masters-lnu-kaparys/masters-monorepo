@@ -5,7 +5,7 @@ import MenuRoundedIcon from "@mui/icons-material/MenuRounded";
 import { AppBar, Box, Button, Container, Divider, Drawer, IconButton, Stack, Toolbar, Typography } from "@mui/material";
 import { Link as RouterLink, Outlet, useLocation } from "react-router-dom";
 import { APP_ROUTES } from "../app/routes";
-import { useI18n } from "../i18n/LanguageProvider";
+import { useI18n } from "../i18n/context";
 import { LanguageSwitcher } from "./LanguageSwitcher";
 
 type AppShellProps = {
@@ -62,6 +62,11 @@ export function AppShell({ isAdmin, userName, onLogout }: AppShellProps) {
       to: APP_ROUTES.home,
       label: t("common.map"),
       active: location.pathname === APP_ROUTES.home,
+    },
+    {
+      to: APP_ROUTES.samplingDemo,
+      label: t("sampling.navigation"),
+      active: location.pathname === APP_ROUTES.samplingDemo,
     },
     ...(isAdmin
       ? [

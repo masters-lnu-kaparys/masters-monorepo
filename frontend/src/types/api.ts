@@ -1,3 +1,5 @@
+export type SpotDataStatus = "current" | "missing" | "stale";
+
 export const SPOT_SOURCE = {
   REAL: 1,
   SIMULATED: 2,
@@ -15,6 +17,7 @@ export type MapSummary = {
   totalSpots: number;
   occupiedSpots: number;
   freeSpots: number;
+  unknownSpots: number;
   occupancyRate: number;
   lastUpdatedAtUtc: string | null;
 };
@@ -29,6 +32,7 @@ export type ParkingLotMap = {
   totalSpots: number;
   occupiedSpots: number;
   freeSpots: number;
+  unknownSpots: number;
   occupancyRate: number;
   lastUpdatedAtUtc: string | null;
 };
@@ -49,6 +53,7 @@ export type LotSpotState = {
   occupied: boolean;
   distanceCm: number | null;
   lastUpdatedAtUtc: string | null;
+  dataStatus: SpotDataStatus;
 };
 
 export type LotActivity = {
@@ -69,6 +74,7 @@ export type LotDetails = {
   totalSpots: number;
   occupiedSpots: number;
   freeSpots: number;
+  unknownSpots: number;
   occupancyRate: number;
   lastUpdatedAtUtc: string | null;
   spots: LotSpotState[];
@@ -104,9 +110,11 @@ export type AdminParkingSpot = {
   lastLatitude: number | null;
   lastLongitude: number | null;
   lastTelemetryAtUtc: string | null;
+  dataStatus: SpotDataStatus;
 };
 
 export type AdminDetectedDevice = {
+  dataStatus: SpotDataStatus;
   deviceId: string;
   firstSeenAtUtc: string;
   lastSeenAtUtc: string;
@@ -127,6 +135,7 @@ export type AdminParkingLot = {
   totalSpots: number;
   occupiedSpots: number;
   freeSpots: number;
+  unknownSpots: number;
   spots: AdminParkingSpot[];
 };
 

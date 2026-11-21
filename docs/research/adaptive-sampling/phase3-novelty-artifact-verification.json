@@ -1,0 +1,15 @@
+{
+  "created_on": "2026-10-25",
+  "passed": true,
+  "old_manifest_entries_verified": 287,
+  "old_manifest_entries_via_matching_readme_snapshot": 2,
+  "cohorts_disjoint_as_planned": true,
+  "ablation_selected_models_and_all_raw_check_results_identical": true,
+  "C4_v1_v2_actual_results_identical": true,
+  "compact_runtime_comparisons": 96,
+  "local_markdown_links_verified": 46,
+  "new_tests": 59,
+  "figure_visual_review": "Both PNGs inspected for layout and readability; no clipped labels",
+  "phase4_gate_opened": false,
+  "final_test_states_opened_by_this_verifier": false
+}

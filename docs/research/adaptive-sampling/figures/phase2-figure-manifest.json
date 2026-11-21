@@ -1,0 +1,33 @@
+{
+  "scope": "descriptive training_development primary windows only; no final-test intervals or policy outcomes read",
+  "source": "S5 City of Melbourne 2019",
+  "input": ".codex-work/parking-research-phase2-20261018/prepared/train_development.parquet",
+  "input_sha256": "35844a824b94c2e7bba392b58277836d002bf452408bbb677411e2401f9e15d4",
+  "plot_code_sha256": "69fc21af2e2a6bcb241500ea227996c8d44ca1e6ebbc7039c5e166cd09035eed",
+  "bays": 3396,
+  "windows": 19406,
+  "complete_episode_counts": {
+    "0": 2011987,
+    "1": 2011399
+  },
+  "matplotlib_version": "3.11.2",
+  "numpy_version": "2.3.5",
+  "outputs": [
+    {
+      "path": "docs/research/adaptive-sampling/figures/phase2-training-occupancy.png",
+      "sha256": "484edba2431fd9547fe14ea9ba958e1ac80d8b781c100f41040d9e4a27071ccd"
+    },
+    {
+      "path": "docs/research/adaptive-sampling/figures/phase2-training-occupancy.svg",
+      "sha256": "c609d1ed990b59115cad01741573d66087128c4d33e74c72f2d857e6bf5d82c3"
+    },
+    {
+      "path": "docs/research/adaptive-sampling/figures/phase2-training-durations.png",
+      "sha256": "382f1aa72775051bb80168443d78ab0b2a69d4852643931aaf9cc1c7eab27134"
+    },
+    {
+      "path": "docs/research/adaptive-sampling/figures/phase2-training-durations.svg",
+      "sha256": "1debabecb346be74d06c9d07f6830d1d26edbd0038658037805c3411c1c9347a"
+    }
+  ]
+}

@@ -2,6 +2,8 @@
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <time.h>
+#include "sas_refresh.h"
+#include "device_secrets.h"
 
 #include "mbedtls/base64.h"
 #include "mbedtls/md.h"
@@ -9,17 +11,14 @@
 // =======================
 // 1) НАЛАШТУВАННЯ
 // =======================
-const char* WIFI_SSID = "YOUR_WIFI_SSID";
-const char* WIFI_PASS = "YOUR_WIFI_PASSWORD";
 
-const char* IOT_HUB_HOSTNAME = "YOUR_IOT_HUB_HOSTNAME";
-const char* DEVICE_ID = "YOUR_DEVICE_ID";
+
+
 
 const bool SEND_DEVICE_LOCATION = true;
 const double DEVICE_LATITUDE = 49.83870;
 const double DEVICE_LONGITUDE = 23.99440;
 
-const char* DEVICE_KEY = "YOUR_DEVICE_PRIMARY_KEY";
 
 static const int MQTT_PORT = 8883;
 static const char* MQTT_API_VERSION = "2021-04-12";
@@ -216,7 +215,8 @@ static float readDistanceCmOnce() {
 
   unsigned long duration = pulseIn(ECHO_PIN, HIGH, 30000);
   if (duration == 0) return -1.0;
-  return duration / 58.2f;
+  float cm = duration / 58.2f;
+  return cm >= 2.0f && cm <= 400.0f ? cm : -1.0f;
 }
 
 static float readDistanceCmAvg(int n = 5) {
@@ -433,7 +433,10 @@ static void printTlsLastError() {
 }
 
 static bool ensureMqttConnected() {
-  if (mqtt.connected()) return true;
+  uint64_t now = getEpochTime();
+  bool refresh = sasToken.length() == 0 || shouldRefreshSas(now, sasExpiry, SAS_REFRESH_BEFORE_SECS);
+  if (mqtt.connected() && !refresh) return true;
+  if (mqtt.connected()) mqtt.disconnect();
 
   IPAddress ip;
   if (WiFi.hostByName(IOT_HUB_HOSTNAME, ip)) {
@@ -443,14 +446,14 @@ static bool ensureMqttConnected() {
     Serial.println("DNS failed for IoT Hub hostname");
   }
 
-  uint64_t now = getEpochTime();
+  now = getEpochTime();
   if (now < 1700000000) {
     Serial.println("Time not synced yet, syncing...");
     syncTimeNtpHard();
     now = getEpochTime();
   }
 
-  if (sasToken.length() == 0 || (sasExpiry > 0 && (sasExpiry - now) < SAS_REFRESH_BEFORE_SECS)) {
+  if (sasToken.length() == 0 || shouldRefreshSas(now, sasExpiry, SAS_REFRESH_BEFORE_SECS)) {
     sasToken = buildSasToken(now);
     Serial.println("SAS token generated/refreshed");
   }

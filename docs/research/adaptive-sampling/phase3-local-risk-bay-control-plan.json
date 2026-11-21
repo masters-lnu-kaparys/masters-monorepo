@@ -1,0 +1,14 @@
+{
+  "created_on": "2026-10-25",
+  "version": "matched-simple-personalized-control-v1",
+  "reason": "Fairness extension declared while the main384-policy fitting run is still in progress and no new candidate check results have been viewed. Shared controls alone cannot isolate bay/context detail from already-known personalization.",
+  "target": "The12 selections frozen by the unchanged main local-risk run, including any fixed60 fallbacks",
+  "control": "All64 bay_state_alpha50 penalty settings from the SAME empirical model, training histories and fitting bank. This is a simpler per-bay state-only scheduler, without clock/observed-age context. It uses the same local rate surrogate and actions.",
+  "fit": "For each target choose one convex mixture over these64 controls using all4 fitting cells. Constrain expected calls<=target in each and minimize worst F/O ratio. For original_strict also constrain M60<=target. Freeze weights and newly needed control model hashes before replaying this annex's selected controls on known check256/check512.",
+  "timing": "Base target outcomes may have been computed by the concurrently running main process by the time annex weights are frozen; record that fact. Annex fitting reads only the fitting banks and frozen target selections, never base check outcomes. This remains exploratory development, not a new holdout.",
+  "check": "Reuse exactly the same phase/cohort setup; evaluate only newly needed state-only control models, then compare expected raw counters to base frozen targets. Report resource and coverage mismatch, paired whole-BayId2000-draw pointwise95% intervals and whether target is no worse in bothF/O with>=5% improvement in at least one at admitted budget.",
+  "interpretation": "A gain over shared controls but not this personalized state-only family is not evidence that the proposed context/shrinkage detail is useful. Do not hide that outcome or call personalization novel.",
+  "new_check_cohort_opened": false,
+  "final_test_evaluated": false,
+  "phase4_may_start": false
+}

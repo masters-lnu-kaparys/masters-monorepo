@@ -1,5 +1,5 @@
 import { useAuth0 } from "@auth0/auth0-react";
-import { useCallback, useLayoutEffect } from "react";
+import { lazy, Suspense, useCallback, useLayoutEffect } from "react";
 import { Navigate, Route, Routes, useNavigate } from "react-router-dom";
 import { configureApiClient, resetApiClient } from "./api/http";
 import { APP_ROUTES } from "./app/routes";
@@ -7,13 +7,15 @@ import { AUTH_CALLBACK_PATH, hasAuthCallbackParams } from "./auth/config";
 import { useEffectiveRoles } from "./auth/useEffectiveRoles";
 import { AppShell } from "./components/AppShell";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import { useI18n } from "./i18n/LanguageProvider";
-import { AdminPage } from "./pages/AdminPage";
+import { useI18n } from "./i18n/context";
+import { FullScreenStatus } from "./components/FullScreenStatus";
 import { AuthCallbackPage } from "./pages/AuthCallbackPage";
 import { ForbiddenPage } from "./pages/ForbiddenPage";
 import { LoginPage } from "./pages/LoginPage";
-import { MonitoringPage } from "./pages/MonitoringPage";
 import "./App.css";
+
+const AdminPage = lazy(() => import("./pages/AdminPage").then(module => ({ default: module.AdminPage })));
+const MonitoringPage = lazy(() => import("./pages/MonitoringPage").then(module => ({ default: module.MonitoringPage })));
 
 export default function App() {
   const { getAccessTokenSilently, logout, user } = useAuth0();
@@ -47,7 +49,11 @@ export default function App() {
 
   useLayoutEffect(() => {
     configureApiClient({
-      getAccessToken: getAccessTokenSilently,
+      getAccessToken: async () => {
+        const token = await getAccessTokenSilently();
+        if (!token) throw new Error(t("api.unauthorized"));
+        return token;
+      },
       onUnauthorized: handleUnauthorized,
       onForbidden: handleForbidden,
     });
@@ -55,10 +61,10 @@ export default function App() {
     return () => {
       resetApiClient();
     };
-  }, [getAccessTokenSilently, handleForbidden, handleUnauthorized]);
+  }, [getAccessTokenSilently, handleForbidden, handleUnauthorized, t]);
 
   return (
-    <Routes>
+    <Suspense fallback={<FullScreenStatus titleKey="route.loading.title" descriptionKey="route.loading.description" loading />}><Routes>
       <Route path={APP_ROUTES.login.slice(1)} element={<LoginPage />} />
       <Route path={APP_ROUTES.forbidden.slice(1)} element={<ForbiddenPage />} />
       <Route path={AUTH_CALLBACK_PATH.slice(1)} element={<AuthCallbackPage />} />
@@ -84,6 +90,6 @@ export default function App() {
         />
       </Route>
       <Route path="*" element={<Navigate to={APP_ROUTES.home} replace />} />
-    </Routes>
+    </Routes></Suspense>
   );
 }

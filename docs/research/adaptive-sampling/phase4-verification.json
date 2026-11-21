@@ -1,0 +1,54 @@
+{
+  "created_on": "2026-10-25",
+  "passed": true,
+  "entry_lock_sha256": "2665ba14e0828371d0f64bc3ff6759f4a8f213e0b3cabf2e8170a9f78d6449b0",
+  "verification_plan_sha256": "31b5fcd01c5bd4e84de19610a0f9fc5cb88f93380ea9e90cd0d1369567cfb1a4",
+  "verification_code_sha256": "1e5343bb8823b1bb366189ee7697015cfd650654b296d1c15376df080053088e",
+  "frozen_analysis_results_sha256": "b97bdfcf647e463b632677991b6f89e4fb20eb67e7ea783dfa3a35f539c5d42c",
+  "cells": {
+    "primary_7_days": {
+      "components": 30,
+      "policies": 17,
+      "bays": 867,
+      "phases": 10,
+      "all_histograms_and_profiles_valid": true,
+      "author_point_gate": true,
+      "final_original_M60_zero": false
+    },
+    "sensitivity_1_day": {
+      "components": 30,
+      "policies": 17,
+      "bays": 867,
+      "phases": 10,
+      "all_histograms_and_profiles_valid": true,
+      "author_point_gate": true,
+      "final_original_M60_zero": false
+    }
+  },
+  "independent_runtime_windows_policies": 36,
+  "all17_and_histogram_equal": true,
+  "previous_manifest_entries_checked": {
+    "phase3-artifact-manifest.json": 17,
+    "phase3-method-lock.json": 57,
+    "phase3-refinement-lock.json": 213,
+    "phase3-novelty-artifacts.json": 172,
+    "phase3-stability-artifacts.json": 52,
+    "phase3-history-scheduler-artifacts.json": 206,
+    "phase3-budget-comparison-artifacts.json": 83,
+    "phase3-analytic-artifacts.json": 45,
+    "phase3-start-reachability-artifacts.json": 42,
+    "phase3-local-risk-artifacts.json": 191,
+    "phase3-closure-artifacts.json": 116
+  },
+  "snapshot_resolutions": 18,
+  "local_links_checked": 41,
+  "figure_dimensions": [
+    2600,
+    1000
+  ],
+  "frozen_source_code_unchanged": true,
+  "new_method_tuning": false,
+  "final_test_evaluated": true,
+  "all_outcomes_retained": true,
+  "frozen_preflight_tests": 131
+}
